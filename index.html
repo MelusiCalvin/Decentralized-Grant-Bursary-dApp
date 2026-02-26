@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bursary Chain | Decentralized Grant Distribution</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              title: ["Bricolage Grotesque", "sans-serif"],
+              body: ["Sora", "sans-serif"],
+            },
+            boxShadow: {
+              neon: "0 0 0 1px rgba(52,211,153,0.5), 0 0 42px rgba(34,211,238,0.2)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        background:
+          radial-gradient(1400px 900px at -10% -20%, rgba(16, 185, 129, 0.25), transparent 60%),
+          radial-gradient(1000px 700px at 105% -5%, rgba(14, 165, 233, 0.2), transparent 50%),
+          linear-gradient(145deg, #020617 0%, #0f172a 46%, #111827 100%);
+      }
+
+      .float-orb {
+        filter: blur(40px);
+        animation: float 9s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-14px);
+        }
+      }
+    </style>
+  </head>
+  <body class="font-body text-slate-100 antialiased">
+    <div class="pointer-events-none fixed inset-0 overflow-hidden">
+      <div class="float-orb absolute -left-20 top-10 h-64 w-64 rounded-full bg-emerald-400/25"></div>
+      <div class="float-orb absolute right-0 top-1/3 h-80 w-80 rounded-full bg-cyan-400/20" style="animation-delay: 1s"></div>
+      <div class="float-orb absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-sky-300/10" style="animation-delay: 2s"></div>
+    </div>
+
+    <main class="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+      <section class="mb-8 rounded-3xl border border-white/10 bg-white/5 p-7 shadow-neon backdrop-blur-xl">
+        <p class="mb-3 inline-flex items-center rounded-full border border-cyan-300/40 bg-cyan-500/15 px-3 py-1 text-xs font-semibold tracking-wide text-cyan-100">
+          CARDANO + LACE + PLUTUS V2
+        </p>
+        <h1 class="font-title text-3xl font-extrabold leading-tight text-white sm:text-5xl">
+          Decentralized Bursary Distribution
+        </h1>
+        <p class="mt-4 max-w-3xl text-sm text-slate-200 sm:text-base">
+          Transparent grant flows where funds are locked on-chain and only released to the approved beneficiary, at the approved time, for the approved amount.
+        </p>
+
+        <div class="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
+          <div id="statusBanner" class="rounded-2xl border border-cyan-300/60 bg-cyan-500/15 px-4 py-3 text-sm font-medium text-cyan-100">
+            Loading...
+          </div>
+          <div class="flex flex-wrap items-center justify-end gap-2">
+            <button
+              id="refreshBtn"
+              class="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              type="button"
+            >
+              Refresh
+            </button>
+            <button
+              id="connectWalletBtn"
+              class="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300"
+              type="button"
+            >
+              Connect Lace
+            </button>
+            <button
+              id="disconnectWalletBtn"
+              class="rounded-xl border border-rose-300/60 bg-rose-500/20 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/30"
+              type="button"
+            >
+              Disconnect
+            </button>
+          </div>
+        </div>
+        <p id="walletState" class="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          Wallet disconnected
+        </p>
+      </section>
+
+      <section class="grid gap-6 lg:grid-cols-2">
+        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
+          <h2 class="font-title text-2xl font-bold text-white">Beneficiary Application</h2>
+          <p class="mt-1 text-sm text-slate-300">Personal details stay off-chain. Wallet address + approval state are linked to grant records.</p>
+          <form id="applyForm" class="mt-5 space-y-3">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Wallet Address</label>
+            <input id="applyWalletAddress" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-200" disabled />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Full Name</label>
+            <input id="fullName" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Email</label>
+            <input id="email" required type="email" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Purpose</label>
+            <textarea id="purpose" required rows="3" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"></textarea>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Proof URL (optional)</label>
+            <input id="proofUrl" type="url" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <button class="w-full rounded-xl bg-cyan-300 px-4 py-2 font-bold text-slate-950 transition hover:bg-cyan-200">Submit Application</button>
+          </form>
+        </article>
+
+        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
+          <h2 class="font-title text-2xl font-bold text-white">Admin: Create Draft Grant</h2>
+          <p class="mt-1 text-sm text-slate-300">Connected admin wallet: <span id="adminWalletHint" class="font-semibold text-cyan-200">Connect admin Lace wallet</span></p>
+          <form id="createGrantForm" class="mt-5 space-y-3">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Amount (Lovelace)</label>
+            <input id="draftAmount" required type="number" min="1" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Unlock Time (UTC)</label>
+            <input id="draftUnlock" required type="datetime-local" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Beneficiary Wallet (optional in draft)</label>
+            <input id="draftBeneficiary" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Notes</label>
+            <textarea id="draftNotes" rows="2" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"></textarea>
+            <button class="w-full rounded-xl bg-emerald-300 px-4 py-2 font-bold text-slate-950 transition hover:bg-emerald-200">Create Draft</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="mt-6 grid gap-6 lg:grid-cols-2">
+        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
+          <h2 class="font-title text-2xl font-bold text-white">Admin: Approve Grant</h2>
+          <p class="mt-1 text-sm text-slate-300">This captures admin intent using wallet signature and writes approval metadata to API.</p>
+          <form id="approveGrantForm" class="mt-5 space-y-3">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Grant ID</label>
+            <input id="approveGrantId" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Beneficiary Wallet</label>
+            <input id="approveBeneficiary" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Amount (Lovelace)</label>
+            <input id="approveAmount" required type="number" min="1" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Unlock Time (UTC)</label>
+            <input id="approveUnlock" required type="datetime-local" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <button class="w-full rounded-xl bg-sky-300 px-4 py-2 font-bold text-slate-950 transition hover:bg-sky-200">Approve Grant</button>
+          </form>
+        </article>
+
+        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
+          <h2 class="font-title text-2xl font-bold text-white">Admin: Fund Smart Contract</h2>
+          <p class="mt-1 text-sm text-slate-300">Funds are locked in script address and no manual withdrawal path exists.</p>
+          <form id="fundGrantForm" class="mt-5 space-y-3">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Grant ID</label>
+            <input id="fundGrantId" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Beneficiary Wallet</label>
+            <input id="fundBeneficiary" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Amount (Lovelace)</label>
+            <input id="fundAmount" required type="number" min="1" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Unlock Time (UTC)</label>
+            <input id="fundUnlock" required type="datetime-local" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <button class="w-full rounded-xl bg-fuchsia-300 px-4 py-2 font-bold text-slate-950 transition hover:bg-fuchsia-200">Fund Contract</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="mt-6">
+        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
+          <h2 class="font-title text-2xl font-bold text-white">Beneficiary: Claim Funds</h2>
+          <p class="mt-1 text-sm text-slate-300">
+            Claim only succeeds if wallet matches approved beneficiary, unlock time has passed, and payout has not already happened.
+          </p>
+          <form id="claimForm" class="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <input id="claimGrantId" required placeholder="Grant ID" class="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
+            <button class="rounded-xl bg-amber-300 px-5 py-2 font-bold text-slate-950 transition hover:bg-amber-200">Claim ADA</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="mt-8 grid gap-6 xl:grid-cols-3">
+        <article class="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/55 xl:col-span-1">
+          <header class="border-b border-white/10 px-4 py-3">
+            <h3 class="font-title text-xl font-bold text-white">Applications</h3>
+          </header>
+          <div class="max-h-96 overflow-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="sticky top-0 bg-slate-900/90 text-xs uppercase tracking-wider text-slate-300">
+                <tr>
+                  <th class="px-4 py-2">ID</th>
+                  <th class="px-4 py-2">Name</th>
+                  <th class="px-4 py-2">Wallet</th>
+                  <th class="px-4 py-2">Status</th>
+                  <th class="px-4 py-2">Created</th>
+                </tr>
+              </thead>
+              <tbody id="applicationsTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/55 xl:col-span-1">
+          <header class="border-b border-white/10 px-4 py-3">
+            <h3 class="font-title text-xl font-bold text-white">Grants</h3>
+          </header>
+          <div class="max-h-96 overflow-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="sticky top-0 bg-slate-900/90 text-xs uppercase tracking-wider text-slate-300">
+                <tr>
+                  <th class="px-4 py-2">ID</th>
+                  <th class="px-4 py-2">Status</th>
+                  <th class="px-4 py-2">Beneficiary</th>
+                  <th class="px-4 py-2">Amount</th>
+                  <th class="px-4 py-2">Unlock</th>
+                </tr>
+              </thead>
+              <tbody id="grantsTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/55 xl:col-span-1">
+          <header class="border-b border-white/10 px-4 py-3">
+            <h3 class="font-title text-xl font-bold text-white">Audit Events</h3>
+          </header>
+          <div class="max-h-96 overflow-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="sticky top-0 bg-slate-900/90 text-xs uppercase tracking-wider text-slate-300">
+                <tr>
+                  <th class="px-4 py-2">Action</th>
+                  <th class="px-4 py-2">Actor</th>
+                  <th class="px-4 py-2">Grant</th>
+                  <th class="px-4 py-2">Time</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
