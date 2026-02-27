@@ -62,3 +62,5 @@ Set values in `js/config.js`:
 - Multiple beneficiaries
 - Admin authentication + signed backend actions
 - Plutus compilation/deployment pipeline
+
+# Decentralized-Grant-Bursary-dApp

@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bursary Chain | Decentralized Grant Distribution</title>
+    <title>Bursary Chain | GrantFlow Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700;800&family=Sora:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
     <script>
@@ -16,240 +16,373 @@
         theme: {
           extend: {
             fontFamily: {
-              title: ["Bricolage Grotesque", "sans-serif"],
-              body: ["Sora", "sans-serif"],
+              body: ["Manrope", "sans-serif"],
+              title: ["Space Grotesk", "sans-serif"],
+            },
+            colors: {
+              ink: "#0f172a",
+              haze: "#f8fafc",
+              panel: "#ffffff",
+              stroke: "#e2e8f0",
+              violetBrand: "#5b44e6",
+              violetSoft: "#f1eeff",
             },
             boxShadow: {
-              neon: "0 0 0 1px rgba(52,211,153,0.5), 0 0 42px rgba(34,211,238,0.2)",
+              card: "0 10px 24px rgba(15, 23, 42, 0.06)",
             },
           },
         },
       };
     </script>
     <style>
-      :root {
-        color-scheme: dark;
-      }
-
       body {
         background:
-          radial-gradient(1400px 900px at -10% -20%, rgba(16, 185, 129, 0.25), transparent 60%),
-          radial-gradient(1000px 700px at 105% -5%, rgba(14, 165, 233, 0.2), transparent 50%),
-          linear-gradient(145deg, #020617 0%, #0f172a 46%, #111827 100%);
+          radial-gradient(1100px 600px at 100% -20%, rgba(91, 68, 230, 0.08), transparent 58%),
+          radial-gradient(900px 500px at -10% 10%, rgba(14, 165, 233, 0.05), transparent 54%),
+          #f3f4f6;
       }
 
-      .float-orb {
-        filter: blur(40px);
-        animation: float 9s ease-in-out infinite;
+      .nav-link.active {
+        background: #eef0ff;
+        color: #4338ca;
       }
 
-      @keyframes float {
-        0%,
-        100% {
-          transform: translateY(0px);
-        }
-        50% {
-          transform: translateY(-14px);
-        }
+      .view-section {
+        display: none;
+      }
+
+      .view-section.active {
+        display: block;
       }
     </style>
   </head>
-  <body class="font-body text-slate-100 antialiased">
-    <div class="pointer-events-none fixed inset-0 overflow-hidden">
-      <div class="float-orb absolute -left-20 top-10 h-64 w-64 rounded-full bg-emerald-400/25"></div>
-      <div class="float-orb absolute right-0 top-1/3 h-80 w-80 rounded-full bg-cyan-400/20" style="animation-delay: 1s"></div>
-      <div class="float-orb absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-sky-300/10" style="animation-delay: 2s"></div>
-    </div>
-
-    <main class="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
-      <section class="mb-8 rounded-3xl border border-white/10 bg-white/5 p-7 shadow-neon backdrop-blur-xl">
-        <p class="mb-3 inline-flex items-center rounded-full border border-cyan-300/40 bg-cyan-500/15 px-3 py-1 text-xs font-semibold tracking-wide text-cyan-100">
-          CARDANO + LACE + PLUTUS V2
-        </p>
-        <h1 class="font-title text-3xl font-extrabold leading-tight text-white sm:text-5xl">
-          Decentralized Bursary Distribution
-        </h1>
-        <p class="mt-4 max-w-3xl text-sm text-slate-200 sm:text-base">
-          Transparent grant flows where funds are locked on-chain and only released to the approved beneficiary, at the approved time, for the approved amount.
-        </p>
-
-        <div class="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
-          <div id="statusBanner" class="rounded-2xl border border-cyan-300/60 bg-cyan-500/15 px-4 py-3 text-sm font-medium text-cyan-100">
-            Loading...
+  <body class="font-body text-ink antialiased">
+    <div class="min-h-screen">
+      <aside
+        class="fixed inset-x-0 top-0 z-40 border-b border-stroke bg-panel/95 backdrop-blur lg:inset-y-0 lg:left-0 lg:w-64 lg:border-b-0 lg:border-r"
+      >
+        <div class="flex h-full flex-col px-4 py-4">
+          <div class="flex items-center gap-3 px-2 py-3">
+            <div class="grid h-10 w-10 place-content-center rounded-xl bg-gradient-to-br from-violetBrand to-indigo-500 text-white">
+              ◈
+            </div>
+            <div>
+              <p class="font-title text-2xl font-bold leading-none">GrantFlow</p>
+              <p class="text-sm text-slate-500">Cardano Distribution</p>
+            </div>
           </div>
-          <div class="flex flex-wrap items-center justify-end gap-2">
-            <button
-              id="refreshBtn"
-              class="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
-              type="button"
-            >
-              Refresh
+
+          <nav class="mt-4 flex gap-2 overflow-x-auto pb-2 lg:mt-7 lg:block lg:space-y-1 lg:overflow-visible">
+            <button data-route="dashboard" class="nav-link active inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
+              <span>▦</span><span>Dashboard</span>
             </button>
-            <button
-              id="connectWalletBtn"
-              class="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300"
-              type="button"
-            >
-              Connect Lace
+            <button data-route="grants" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
+              <span>📄</span><span>Grants</span>
             </button>
-            <button
-              id="disconnectWalletBtn"
-              class="rounded-xl border border-rose-300/60 bg-rose-500/20 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/30"
-              type="button"
-            >
-              Disconnect
+            <button data-route="applications" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
+              <span>👥</span><span>Applications</span>
             </button>
+            <button data-route="create-grant" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
+              <span>＋</span><span>Create Grant</span>
+            </button>
+          </nav>
+
+          <div class="mt-4 rounded-2xl border border-stroke bg-haze p-3 lg:mt-auto">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Admin Wallet</p>
+            <p id="walletIndicator" class="mt-2 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-600">
+              Wallet disconnected
+            </p>
+            <div class="mt-2 grid grid-cols-2 gap-2">
+              <button id="connectWalletBtn" class="rounded-lg bg-violetBrand px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-600">
+                Connect
+              </button>
+              <button id="disconnectWalletBtn" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">
+                Disconnect
+              </button>
+            </div>
+            <p class="mt-3 text-xs text-slate-500">Powered by Cardano & Lace</p>
           </div>
         </div>
-        <p id="walletState" class="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
-          Wallet disconnected
-        </p>
-      </section>
+      </aside>
 
-      <section class="grid gap-6 lg:grid-cols-2">
-        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
-          <h2 class="font-title text-2xl font-bold text-white">Beneficiary Application</h2>
-          <p class="mt-1 text-sm text-slate-300">Personal details stay off-chain. Wallet address + approval state are linked to grant records.</p>
-          <form id="applyForm" class="mt-5 space-y-3">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Wallet Address</label>
-            <input id="applyWalletAddress" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-slate-200" disabled />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Full Name</label>
-            <input id="fullName" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Email</label>
-            <input id="email" required type="email" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Purpose</label>
-            <textarea id="purpose" required rows="3" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"></textarea>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Proof URL (optional)</label>
-            <input id="proofUrl" type="url" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <button class="w-full rounded-xl bg-cyan-300 px-4 py-2 font-bold text-slate-950 transition hover:bg-cyan-200">Submit Application</button>
-          </form>
-        </article>
-
-        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
-          <h2 class="font-title text-2xl font-bold text-white">Admin: Create Draft Grant</h2>
-          <p class="mt-1 text-sm text-slate-300">Connected admin wallet: <span id="adminWalletHint" class="font-semibold text-cyan-200">Connect admin Lace wallet</span></p>
-          <form id="createGrantForm" class="mt-5 space-y-3">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Amount (Lovelace)</label>
-            <input id="draftAmount" required type="number" min="1" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Unlock Time (UTC)</label>
-            <input id="draftUnlock" required type="datetime-local" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Beneficiary Wallet (optional in draft)</label>
-            <input id="draftBeneficiary" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Notes</label>
-            <textarea id="draftNotes" rows="2" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"></textarea>
-            <button class="w-full rounded-xl bg-emerald-300 px-4 py-2 font-bold text-slate-950 transition hover:bg-emerald-200">Create Draft</button>
-          </form>
-        </article>
-      </section>
-
-      <section class="mt-6 grid gap-6 lg:grid-cols-2">
-        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
-          <h2 class="font-title text-2xl font-bold text-white">Admin: Approve Grant</h2>
-          <p class="mt-1 text-sm text-slate-300">This captures admin intent using wallet signature and writes approval metadata to API.</p>
-          <form id="approveGrantForm" class="mt-5 space-y-3">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Grant ID</label>
-            <input id="approveGrantId" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Beneficiary Wallet</label>
-            <input id="approveBeneficiary" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Amount (Lovelace)</label>
-            <input id="approveAmount" required type="number" min="1" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Unlock Time (UTC)</label>
-            <input id="approveUnlock" required type="datetime-local" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <button class="w-full rounded-xl bg-sky-300 px-4 py-2 font-bold text-slate-950 transition hover:bg-sky-200">Approve Grant</button>
-          </form>
-        </article>
-
-        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
-          <h2 class="font-title text-2xl font-bold text-white">Admin: Fund Smart Contract</h2>
-          <p class="mt-1 text-sm text-slate-300">Funds are locked in script address and no manual withdrawal path exists.</p>
-          <form id="fundGrantForm" class="mt-5 space-y-3">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Grant ID</label>
-            <input id="fundGrantId" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Beneficiary Wallet</label>
-            <input id="fundBeneficiary" required class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Amount (Lovelace)</label>
-            <input id="fundAmount" required type="number" min="1" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Unlock Time (UTC)</label>
-            <input id="fundUnlock" required type="datetime-local" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <button class="w-full rounded-xl bg-fuchsia-300 px-4 py-2 font-bold text-slate-950 transition hover:bg-fuchsia-200">Fund Contract</button>
-          </form>
-        </article>
-      </section>
-
-      <section class="mt-6">
-        <article class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 backdrop-blur-xl">
-          <h2 class="font-title text-2xl font-bold text-white">Beneficiary: Claim Funds</h2>
-          <p class="mt-1 text-sm text-slate-300">
-            Claim only succeeds if wallet matches approved beneficiary, unlock time has passed, and payout has not already happened.
-          </p>
-          <form id="claimForm" class="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
-            <input id="claimGrantId" required placeholder="Grant ID" class="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white" />
-            <button class="rounded-xl bg-amber-300 px-5 py-2 font-bold text-slate-950 transition hover:bg-amber-200">Claim ADA</button>
-          </form>
-        </article>
-      </section>
-
-      <section class="mt-8 grid gap-6 xl:grid-cols-3">
-        <article class="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/55 xl:col-span-1">
-          <header class="border-b border-white/10 px-4 py-3">
-            <h3 class="font-title text-xl font-bold text-white">Applications</h3>
+      <main class="pt-[170px] lg:ml-64 lg:pt-0">
+        <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <header class="mb-5 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 id="pageTitle" class="font-title text-4xl font-bold leading-tight text-slate-900">Grant Dashboard</h1>
+              <p id="pageSubtitle" class="mt-1 text-lg text-slate-600">Manage and distribute grants to beneficiaries</p>
+            </div>
+            <button
+              id="headerCreateGrantBtn"
+              class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violetBrand px-5 py-3 font-semibold text-white shadow-card transition hover:brightness-110"
+            >
+              <span>＋</span>
+              <span>Create Grant</span>
+            </button>
           </header>
-          <div class="max-h-96 overflow-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="sticky top-0 bg-slate-900/90 text-xs uppercase tracking-wider text-slate-300">
-                <tr>
-                  <th class="px-4 py-2">ID</th>
-                  <th class="px-4 py-2">Name</th>
-                  <th class="px-4 py-2">Wallet</th>
-                  <th class="px-4 py-2">Status</th>
-                  <th class="px-4 py-2">Created</th>
-                </tr>
-              </thead>
-              <tbody id="applicationsTableBody"></tbody>
-            </table>
-          </div>
-        </article>
 
-        <article class="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/55 xl:col-span-1">
-          <header class="border-b border-white/10 px-4 py-3">
-            <h3 class="font-title text-xl font-bold text-white">Grants</h3>
-          </header>
-          <div class="max-h-96 overflow-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="sticky top-0 bg-slate-900/90 text-xs uppercase tracking-wider text-slate-300">
-                <tr>
-                  <th class="px-4 py-2">ID</th>
-                  <th class="px-4 py-2">Status</th>
-                  <th class="px-4 py-2">Beneficiary</th>
-                  <th class="px-4 py-2">Amount</th>
-                  <th class="px-4 py-2">Unlock</th>
-                </tr>
-              </thead>
-              <tbody id="grantsTableBody"></tbody>
-            </table>
+          <div id="statusBanner" class="mb-6 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 shadow-card">
+            Loading...
           </div>
-        </article>
 
-        <article class="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/55 xl:col-span-1">
-          <header class="border-b border-white/10 px-4 py-3">
-            <h3 class="font-title text-xl font-bold text-white">Audit Events</h3>
-          </header>
-          <div class="max-h-96 overflow-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="sticky top-0 bg-slate-900/90 text-xs uppercase tracking-wider text-slate-300">
-                <tr>
-                  <th class="px-4 py-2">Action</th>
-                  <th class="px-4 py-2">Actor</th>
-                  <th class="px-4 py-2">Grant</th>
-                  <th class="px-4 py-2">Time</th>
-                </tr>
-              </thead>
-              <tbody id="auditTableBody"></tbody>
-            </table>
-          </div>
-        </article>
-      </section>
-    </main>
+          <section id="view-dashboard" class="view-section active">
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                <p class="text-sm font-semibold uppercase tracking-wide text-slate-500">Total Funding Pool</p>
+                <p id="metricTotalPool" class="mt-3 font-title text-4xl font-bold text-slate-900">₳0</p>
+              </article>
+              <article class="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-card">
+                <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">Distributed</p>
+                <p id="metricDistributed" class="mt-3 font-title text-4xl font-bold text-emerald-900">₳0</p>
+              </article>
+              <article class="rounded-2xl border border-violet-100 bg-violet-50 p-5 shadow-card">
+                <p class="text-sm font-semibold uppercase tracking-wide text-violet-700">Active Grants</p>
+                <p id="metricActiveGrants" class="mt-3 font-title text-4xl font-bold text-violet-900">0</p>
+              </article>
+              <article class="rounded-2xl border border-amber-100 bg-amber-50 p-5 shadow-card">
+                <p class="text-sm font-semibold uppercase tracking-wide text-amber-700">Beneficiaries</p>
+                <p id="metricBeneficiaries" class="mt-3 font-title text-4xl font-bold text-amber-900">0</p>
+              </article>
+            </div>
+
+            <div class="mt-6 grid gap-6 xl:grid-cols-3">
+              <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card xl:col-span-2">
+                <div class="mb-4 flex items-center justify-between">
+                  <h2 class="font-title text-2xl font-bold text-slate-900">Active Grants</h2>
+                  <button data-route-jump="grants" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">View all</button>
+                </div>
+                <div id="dashboardActiveGrants" class="space-y-4"></div>
+              </article>
+
+              <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                <div class="mb-4 flex items-center justify-between">
+                  <h2 class="font-title text-2xl font-bold text-slate-900">Recent Applications</h2>
+                  <button data-route-jump="applications" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800">View all</button>
+                </div>
+                <div id="dashboardRecentApplications" class="space-y-3"></div>
+              </article>
+            </div>
+          </section>
+
+          <section id="view-grants" class="view-section">
+            <article class="rounded-2xl border border-stroke bg-panel p-4 shadow-card">
+              <div class="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+                <input id="grantsSearchInput" placeholder="Search grants..." class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                <select id="grantsStatusFilter" class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
+                  <option value="all">All Status</option>
+                  <option value="draft">Draft</option>
+                  <option value="funded">Funded</option>
+                  <option value="approved">Approved</option>
+                  <option value="claimed">Claimed</option>
+                </select>
+                <select id="grantsCategoryFilter" class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
+                  <option value="all">All Categories</option>
+                </select>
+              </div>
+            </article>
+            <p id="grantsCountLabel" class="mt-4 text-sm font-medium text-slate-600">Showing 0 grants</p>
+            <div id="grantsGrid" class="mt-3 grid gap-5 md:grid-cols-2"></div>
+          </section>
+
+          <section id="view-create-grant" class="view-section">
+            <form id="createGrantForm" class="space-y-5">
+              <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                <h2 class="font-title text-2xl font-bold text-slate-900">Basic Information</h2>
+                <div class="mt-4 space-y-3">
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Grant Title</label>
+                    <input id="grantTitleInput" required class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" placeholder="e.g. Community Development Fund 2026" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Description</label>
+                    <textarea id="grantDescriptionInput" required rows="4" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" placeholder="Describe the purpose and goals of this grant..."></textarea>
+                  </div>
+                  <div class="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label class="text-sm font-semibold text-slate-700">Category</label>
+                      <select id="grantCategoryInput" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
+                        <option>Education</option>
+                        <option>Community</option>
+                        <option>NGO</option>
+                        <option>Health</option>
+                        <option>Innovation</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-sm font-semibold text-slate-700">Application Deadline</label>
+                      <input id="grantDeadlineInput" type="date" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                <h2 class="font-title text-2xl font-bold text-slate-900">Funding Details</h2>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Total Funding Pool (ADA)</label>
+                    <input id="totalFundingAdaInput" required type="number" min="1" step="0.01" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" value="1000" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Max Per Beneficiary (ADA)</label>
+                    <input id="maxBeneficiaryAdaInput" required type="number" min="1" step="0.01" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" value="250" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Unlock Time (UTC)</label>
+                    <input id="grantUnlockInput" required type="datetime-local" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Pre-Approved Beneficiary Wallet (optional)</label>
+                    <input id="grantBeneficiaryInput" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" placeholder="addr_test..." />
+                  </div>
+                </div>
+              </article>
+
+              <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <h2 class="font-title text-2xl font-bold text-slate-900">Admin Wallet</h2>
+                  <button id="inlineConnectWalletBtn" type="button" class="rounded-xl bg-violetBrand px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600">
+                    Connect Lace Wallet
+                  </button>
+                </div>
+                <p id="createWalletState" class="mt-3 rounded-xl border border-stroke bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  Wallet disconnected
+                </p>
+              </article>
+
+              <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                <div class="mb-4 flex items-center justify-between">
+                  <h2 class="font-title text-2xl font-bold text-slate-900">Milestones</h2>
+                  <button id="addMilestoneBtn" type="button" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                    + Add
+                  </button>
+                </div>
+                <p id="milestoneTotalLabel" class="mb-3 text-sm font-medium text-slate-600">Total: 100%</p>
+                <div id="milestonesContainer" class="space-y-3"></div>
+              </article>
+
+              <div class="flex justify-end gap-3">
+                <button id="createGrantCancelBtn" type="button" class="rounded-xl border border-slate-300 bg-white px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-100">
+                  Cancel
+                </button>
+                <button type="submit" class="rounded-xl bg-gradient-to-r from-indigo-600 to-violetBrand px-6 py-2.5 font-semibold text-white shadow-card transition hover:brightness-110">
+                  Create Grant
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section id="view-applications" class="view-section">
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <article class="rounded-2xl border border-stroke bg-panel p-4 shadow-card">
+                <p class="text-sm text-slate-500">Total</p>
+                <p id="appTotalCount" class="font-title text-3xl font-bold">0</p>
+              </article>
+              <article class="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-card">
+                <p class="text-sm text-amber-700">Pending</p>
+                <p id="appPendingCount" class="font-title text-3xl font-bold text-amber-900">0</p>
+              </article>
+              <article class="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 shadow-card">
+                <p class="text-sm text-emerald-700">Approved</p>
+                <p id="appApprovedCount" class="font-title text-3xl font-bold text-emerald-900">0</p>
+              </article>
+              <article class="rounded-2xl border border-rose-100 bg-rose-50 p-4 shadow-card">
+                <p class="text-sm text-rose-700">Rejected</p>
+                <p id="appRejectedCount" class="font-title text-3xl font-bold text-rose-900">0</p>
+              </article>
+            </div>
+
+            <article class="mt-4 rounded-2xl border border-stroke bg-panel p-4 shadow-card">
+              <div class="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+                <input id="appsSearchInput" placeholder="Search by name, email, wallet..." class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                <select id="appsStatusFilter" class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <select id="appsGrantFilter" class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
+                  <option value="all">All Grants</option>
+                </select>
+              </div>
+            </article>
+
+            <p id="appsCountLabel" class="mt-4 text-sm font-medium text-slate-600">Showing 0 applications</p>
+            <div id="applicationsList" class="mt-3 space-y-4"></div>
+          </section>
+
+          <section id="view-application-detail" class="view-section">
+            <button id="appDetailBackBtn" class="mb-4 inline-flex items-center gap-2 rounded-xl border border-stroke bg-panel px-4 py-2 text-sm font-semibold text-slate-700 shadow-card transition hover:bg-slate-100">
+              ← Back to Applications
+            </button>
+            <div class="grid gap-6 xl:grid-cols-[2fr_1fr]">
+              <div class="space-y-5">
+                <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                  <p id="appDetailStatusBadge" class="inline-flex rounded-full bg-violetSoft px-3 py-1 text-xs font-semibold text-indigo-700">pending</p>
+                  <h2 id="appDetailTitle" class="mt-2 font-title text-3xl font-bold text-slate-900">Applicant Name</h2>
+                  <p id="appDetailSub" class="text-slate-600">Application for Grant</p>
+                  <div id="appDetailInfoCards" class="mt-4 grid gap-3 md:grid-cols-2"></div>
+                </article>
+                <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                  <h3 class="font-title text-2xl font-bold text-slate-900">Proposal</h3>
+                  <p id="appDetailProposal" class="mt-3 leading-relaxed text-slate-700"></p>
+                </article>
+              </div>
+              <div class="space-y-4">
+                <article class="rounded-2xl bg-gradient-to-br from-indigo-600 to-violetBrand p-5 text-white shadow-card">
+                  <p class="text-sm opacity-90">Requested Amount</p>
+                  <p id="appDetailRequested" class="mt-2 font-title text-4xl font-bold">₳0</p>
+                </article>
+                <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                  <h3 class="font-title text-2xl font-bold text-slate-900">Admin Wallet</h3>
+                  <p id="appDetailWallet" class="mt-2 rounded-lg border border-stroke bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                    Wallet disconnected
+                  </p>
+                  <button id="appDetailConnectWalletBtn" class="mt-3 w-full rounded-xl bg-violetBrand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-600">
+                    Connect Lace Wallet
+                  </button>
+                </article>
+                <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                  <h3 class="font-title text-2xl font-bold text-slate-900">Decision</h3>
+                  <div class="mt-3 space-y-3">
+                    <div>
+                      <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Target Grant</label>
+                      <select id="appDetailGrantSelect" class="mt-1 w-full rounded-xl border border-stroke px-3 py-2 text-sm outline-none focus:border-indigo-400"></select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Unlock Time</label>
+                        <input id="appDetailUnlockInput" type="datetime-local" class="mt-1 w-full rounded-xl border border-stroke px-3 py-2 text-sm outline-none focus:border-indigo-400" />
+                      </div>
+                      <div>
+                        <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Amount (ADA)</label>
+                        <input id="appDetailApproveAmountAda" type="number" min="0.01" step="0.01" class="mt-1 w-full rounded-xl border border-stroke px-3 py-2 text-sm outline-none focus:border-indigo-400" />
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                      <button id="appDetailApproveBtn" class="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">Approve</button>
+                      <button id="appDetailRejectBtn" class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">Reject</button>
+                      <button id="appDetailFundBtn" class="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700">Fund</button>
+                    </div>
+                    <div class="rounded-xl border border-stroke bg-slate-50 p-3">
+                      <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Claim Selected Grant</label>
+                      <div class="mt-1 flex gap-2">
+                        <input id="appDetailClaimGrantId" class="w-full rounded-lg border border-stroke bg-white px-2 py-1.5 text-xs text-slate-700" readonly />
+                        <button id="appDetailClaimBtn" class="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600">Claim</button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                  <h3 class="font-title text-2xl font-bold text-slate-900">Timeline</h3>
+                  <div id="appDetailTimeline" class="mt-3 space-y-2 text-sm text-slate-600"></div>
+                </article>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
     <script type="module" src="./js/app.js"></script>
   </body>
 </html>

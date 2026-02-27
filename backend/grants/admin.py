@@ -4,15 +4,15 @@ from .models import Application, AuditEvent, Grant
 
 @admin.register(Grant)
 class GrantAdmin(admin.ModelAdmin):
-    list_display = ("id", "status", "admin_wallet", "beneficiary_wallet", "amount_lovelace", "paid")
-    search_fields = ("admin_wallet", "beneficiary_wallet", "id")
+    list_display = ("id", "title", "category", "status", "admin_wallet", "beneficiary_wallet", "amount_lovelace", "paid")
+    search_fields = ("title", "category", "admin_wallet", "beneficiary_wallet", "id")
     list_filter = ("status", "paid", "approved")
 
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display = ("id", "full_name", "wallet_address", "status", "created_at")
-    search_fields = ("full_name", "wallet_address", "email")
+    list_display = ("id", "full_name", "organization", "wallet_address", "status", "created_at")
+    search_fields = ("full_name", "wallet_address", "email", "organization")
     list_filter = ("status",)
 
 

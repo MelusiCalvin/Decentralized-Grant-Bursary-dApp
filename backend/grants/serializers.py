@@ -12,13 +12,16 @@ class ApplicationSerializer(serializers.ModelSerializer):
             "wallet_address",
             "full_name",
             "email",
+            "organization",
             "purpose",
             "proof_url",
+            "requested_amount_lovelace",
+            "released_amount_lovelace",
             "status",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "status"]
+        read_only_fields = ["id", "created_at", "updated_at", "status", "released_amount_lovelace"]
 
 
 class ApplicationReviewSerializer(serializers.Serializer):
@@ -32,11 +35,19 @@ class GrantSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "status",
+            "title",
+            "description",
+            "category",
             "admin_wallet",
             "beneficiary_wallet",
+            "application_deadline",
+            "total_funding_lovelace",
+            "max_per_beneficiary_lovelace",
+            "distributed_lovelace",
             "amount_lovelace",
             "unlock_time",
             "milestone_approved",
+            "milestones",
             "approved",
             "paid",
             "funded_tx_hash",
@@ -61,6 +72,16 @@ class GrantSerializer(serializers.ModelSerializer):
     def validate_amount_lovelace(self, value):
         if value <= 0:
             raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
+
+    def validate_total_funding_lovelace(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Total funding pool cannot be negative.")
+        return value
+
+    def validate_max_per_beneficiary_lovelace(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Max per beneficiary cannot be negative.")
         return value
 
     def validate_unlock_time(self, value):

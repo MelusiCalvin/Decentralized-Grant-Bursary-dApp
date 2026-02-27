@@ -20,12 +20,20 @@ class Grant(TimestampedModel):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    title = models.CharField(max_length=180, default="Untitled Grant")
+    description = models.TextField(blank=True)
+    category = models.CharField(max_length=80, default="General", blank=True)
 
     admin_wallet = models.CharField(max_length=200)
     beneficiary_wallet = models.CharField(max_length=200, blank=True)
+    application_deadline = models.DateTimeField(null=True, blank=True)
+    total_funding_lovelace = models.BigIntegerField(default=0)
+    max_per_beneficiary_lovelace = models.BigIntegerField(default=0)
+    distributed_lovelace = models.BigIntegerField(default=0)
     amount_lovelace = models.BigIntegerField(default=0)
     unlock_time = models.DateTimeField(null=True, blank=True)
     milestone_approved = models.BooleanField(default=True)
+    milestones = models.JSONField(default=list, blank=True)
 
     approved = models.BooleanField(default=False)
     paid = models.BooleanField(default=False)
@@ -76,8 +84,11 @@ class Application(TimestampedModel):
     wallet_address = models.CharField(max_length=200)
     full_name = models.CharField(max_length=160)
     email = models.EmailField()
+    organization = models.CharField(max_length=180, blank=True)
     purpose = models.TextField()
     proof_url = models.URLField(blank=True)
+    requested_amount_lovelace = models.BigIntegerField(default=0)
+    released_amount_lovelace = models.BigIntegerField(default=0)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
 
     def __str__(self):

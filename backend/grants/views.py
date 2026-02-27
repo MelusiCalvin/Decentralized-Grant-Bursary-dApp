@@ -1,3 +1,4 @@
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
@@ -114,6 +115,8 @@ class GrantApproveView(APIView):
 
         grant.beneficiary_wallet = data["beneficiary_wallet"]
         grant.amount_lovelace = data["amount_lovelace"]
+        if grant.max_per_beneficiary_lovelace <= 0:
+            grant.max_per_beneficiary_lovelace = data["amount_lovelace"]
         grant.unlock_time = data["unlock_time"]
         grant.milestone_approved = data["milestone_approved"]
         grant.approved = True
@@ -148,9 +151,11 @@ class GrantRecordFundingView(APIView):
             )
 
         grant.funded_tx_hash = data["funded_tx_hash"]
+        if grant.total_funding_lovelace <= 0:
+            grant.total_funding_lovelace = max(grant.amount_lovelace, 0)
         if grant.status == Grant.Status.DRAFT:
             grant.status = Grant.Status.FUNDED
-        grant.save(update_fields=["funded_tx_hash", "status", "updated_at"])
+        grant.save(update_fields=["funded_tx_hash", "total_funding_lovelace", "status", "updated_at"])
 
         log_event(
             action="GRANT_FUNDED",
@@ -204,7 +209,13 @@ class GrantRecordClaimView(APIView):
         grant.claim_tx_hash = data["claim_tx_hash"]
         grant.paid = True
         grant.status = Grant.Status.CLAIMED
-        grant.save(update_fields=["claim_tx_hash", "paid", "status", "updated_at"])
+        grant.distributed_lovelace = (grant.distributed_lovelace or 0) + (grant.amount_lovelace or 0)
+        grant.save(update_fields=["claim_tx_hash", "paid", "status", "distributed_lovelace", "updated_at"])
+
+        Application.objects.filter(
+            grant=grant,
+            wallet_address=data["wallet_address"],
+        ).update(released_amount_lovelace=F("released_amount_lovelace") + grant.amount_lovelace)
 
         log_event(
             action="GRANT_CLAIMED",
