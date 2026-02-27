@@ -31,8 +31,18 @@ class HealthView(APIView):
 
 
 class ApplicationListCreateView(generics.ListCreateAPIView):
-    queryset = Application.objects.all().order_by("-created_at")
     serializer_class = ApplicationSerializer
+
+    def get_queryset(self):
+        queryset = Application.objects.select_related("grant").all().order_by("-created_at")
+        applicant_wallet = self.request.query_params.get("applicant_wallet", "").strip()
+        funder_wallet = self.request.query_params.get("funder_wallet", "").strip()
+
+        if applicant_wallet:
+            queryset = queryset.filter(wallet_address=applicant_wallet)
+        elif funder_wallet:
+            queryset = queryset.filter(grant__admin_wallet=funder_wallet)
+        return queryset
 
     def perform_create(self, serializer):
         application = serializer.save()
@@ -51,17 +61,38 @@ class ApplicationReviewView(APIView):
         serializer.is_valid(raise_exception=True)
         status_value = serializer.validated_data["status"]
         grant_id = serializer.validated_data.get("grant_id")
+        admin_wallet = request.data.get("admin_wallet", "").strip()
+
+        if not admin_wallet:
+            return Response(
+                {"error": "admin_wallet is required for application review."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        target_grant = application.grant
 
         if grant_id:
-            grant = get_object_or_404(Grant, id=grant_id)
-            application.grant = grant
+            target_grant = get_object_or_404(Grant, id=grant_id)
+            application.grant = target_grant
+
+        if not target_grant:
+            return Response(
+                {"error": "Application must be linked to a grant before review."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if target_grant.admin_wallet != admin_wallet:
+            return Response(
+                {"error": "Only the funder who created this grant can review its applicants."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         application.status = status_value
         application.save(update_fields=["status", "grant", "updated_at"])
 
         log_event(
             action="APPLICATION_REVIEWED",
-            actor_wallet=request.data.get("admin_wallet", ""),
+            actor_wallet=admin_wallet,
             grant=application.grant,
             details={"application_id": str(application.id), "status": status_value},
         )
