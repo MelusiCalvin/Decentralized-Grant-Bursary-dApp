@@ -87,6 +87,7 @@ class Application(TimestampedModel):
     organization = models.CharField(max_length=180, blank=True)
     purpose = models.TextField()
     proof_url = models.URLField(blank=True)
+    milestone_submissions = models.JSONField(default=list, blank=True)
     requested_amount_lovelace = models.BigIntegerField(default=0)
     released_amount_lovelace = models.BigIntegerField(default=0)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)

@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 *.pyd
 backend/.venv/
+backend/staticfiles/
 backend/db.sqlite3
 
 # JS

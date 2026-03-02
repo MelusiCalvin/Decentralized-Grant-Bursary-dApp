@@ -4,57 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bursary Chain | GrantFlow Dashboard</title>
+    <link rel="icon" href="assets/images/Coxygen logo.png" type="image/png"/>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/script.js"></script>
+    <link rel="stylesheet" href="assets/css/style.css"/>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              body: ["Manrope", "sans-serif"],
-              title: ["Space Grotesk", "sans-serif"],
-            },
-            colors: {
-              ink: "#0f172a",
-              haze: "#f8fafc",
-              panel: "#ffffff",
-              stroke: "#e2e8f0",
-              violetBrand: "#5b44e6",
-              violetSoft: "#f1eeff",
-            },
-            boxShadow: {
-              card: "0 10px 24px rgba(15, 23, 42, 0.06)",
-            },
-          },
-        },
-      };
-    </script>
-    <style>
-      body {
-        background:
-          radial-gradient(1100px 600px at 100% -20%, rgba(91, 68, 230, 0.08), transparent 58%),
-          radial-gradient(900px 500px at -10% 10%, rgba(14, 165, 233, 0.05), transparent 54%),
-          #f3f4f6;
-      }
-
-      .nav-link.active {
-        background: #eef0ff;
-        color: #4338ca;
-      }
-
-      .view-section {
-        display: none;
-      }
-
-      .view-section.active {
-        display: block;
-      }
-    </style>
   </head>
   <body class="font-body text-ink antialiased">
     <div class="min-h-screen">
@@ -78,6 +37,9 @@
             </button>
             <button data-route="grants" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
               <span>📄</span><span>Grants</span>
+            </button>
+            <button data-route="apply" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
+              <span>Apply</span>
             </button>
             <button data-route="applications" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
               <span>👥</span><span>Applications</span>
@@ -184,6 +146,66 @@
             <div id="grantsGrid" class="mt-3 grid gap-5 md:grid-cols-2"></div>
           </section>
 
+          <section id="view-apply" class="view-section">
+            <form id="applyForm" class="space-y-5">
+              <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <h2 class="font-title text-2xl font-bold text-slate-900">Submit Application</h2>
+                  <button id="applyConnectWalletBtn" type="button" class="rounded-xl bg-violetBrand px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600">
+                    Connect Wallet
+                  </button>
+                </div>
+                <p id="applyWalletState" class="rounded-xl border border-stroke bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  Wallet disconnected
+                </p>
+                <div class="mt-4 space-y-3">
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Select Grant</label>
+                    <select id="applyGrantSelect" required class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400"></select>
+                  </div>
+                  <div class="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label class="text-sm font-semibold text-slate-700">Full Name</label>
+                      <input id="applyFullNameInput" required class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                    </div>
+                    <div>
+                      <label class="text-sm font-semibold text-slate-700">Email</label>
+                      <input id="applyEmailInput" required type="email" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                    </div>
+                  </div>
+                  <div class="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label class="text-sm font-semibold text-slate-700">Organization</label>
+                      <input id="applyOrganizationInput" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                    </div>
+                    <div>
+                      <label class="text-sm font-semibold text-slate-700">Requested Amount (ADA)</label>
+                      <input id="applyRequestedAdaInput" required type="number" min="0.01" step="0.01" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Proposal / Purpose</label>
+                    <textarea id="applyPurposeInput" required rows="4" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400"></textarea>
+                  </div>
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Proof URL (optional)</label>
+                    <input id="applyProofUrlInput" type="url" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
+                  </div>
+                  <div class="rounded-xl border border-stroke bg-slate-50 p-3">
+                    <p class="text-sm font-semibold text-slate-700">Milestone Evidence</p>
+                    <p id="applyMilestonesHint" class="mt-1 text-xs text-slate-500">Select a grant to load required milestone uploads.</p>
+                    <div id="applyMilestonesContainer" class="mt-3 space-y-3"></div>
+                  </div>
+                </div>
+              </article>
+              <div class="flex justify-end">
+                <button type="submit" class="rounded-xl bg-gradient-to-r from-indigo-600 to-violetBrand px-6 py-2.5 font-semibold text-white shadow-card transition hover:brightness-110">
+                  Submit Application
+                </button>
+              </div>
+            </form>
+          </section>
+
           <section id="view-create-grant" class="view-section">
             <form id="createGrantForm" class="space-y-5">
               <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
@@ -201,11 +223,11 @@
                     <div>
                       <label class="text-sm font-semibold text-slate-700">Category</label>
                       <select id="grantCategoryInput" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
-                        <option>Education</option>
-                        <option>Community</option>
-                        <option>NGO</option>
-                        <option>Health</option>
-                        <option>Innovation</option>
+                        <option value="Education">Education</option>
+                        <option value="Community Projects">Community Projects</option>
+                        <option value="NGO">NGO</option>
+                        <option value="Health">Health</option>
+                        <option value="Innovation">Innovation</option>
                       </select>
                     </div>
                     <div>
@@ -231,10 +253,6 @@
                     <label class="text-sm font-semibold text-slate-700">Unlock Time (UTC)</label>
                     <input id="grantUnlockInput" required type="datetime-local" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
                   </div>
-                  <div>
-                    <label class="text-sm font-semibold text-slate-700">Pre-Approved Beneficiary Wallet (optional)</label>
-                    <input id="grantBeneficiaryInput" class="mt-1 w-full rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" placeholder="addr_test..." />
-                  </div>
                 </div>
               </article>
 
@@ -257,6 +275,7 @@
                     + Add
                   </button>
                 </div>
+                <p id="milestoneTemplateHint" class="mb-2 text-xs text-slate-500"></p>
                 <p id="milestoneTotalLabel" class="mb-3 text-sm font-medium text-slate-600">Total: 100%</p>
                 <div id="milestonesContainer" class="space-y-3"></div>
               </article>
@@ -326,6 +345,7 @@
                 <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
                   <h3 class="font-title text-2xl font-bold text-slate-900">Proposal</h3>
                   <p id="appDetailProposal" class="mt-3 leading-relaxed text-slate-700"></p>
+                  <div id="appDetailMilestoneSubmissions" class="mt-4 space-y-2"></div>
                 </article>
               </div>
               <div class="space-y-4">

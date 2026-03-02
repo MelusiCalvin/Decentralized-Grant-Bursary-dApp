@@ -13,17 +13,40 @@ async function request(path, options = {}) {
   const payload = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const message = typeof payload === "object" ? payload.error || JSON.stringify(payload) : payload;
-    throw new Error(message || "Request failed.");
+    const detail = formatApiError(payload);
+    const message = `HTTP ${response.status} on ${path}: ${detail || "Request failed."}`;
+    throw new Error(message);
   }
 
   return payload;
 }
 
+function formatApiError(payload) {
+  if (!payload) return "";
+  if (typeof payload === "string") return payload;
+  if (payload.error) return payload.error;
+  if (typeof payload !== "object") return String(payload);
+
+  const pairs = Object.entries(payload)
+    .map(([field, value]) => {
+      if (Array.isArray(value)) return `${field}: ${value.join(", ")}`;
+      if (value && typeof value === "object") return `${field}: ${JSON.stringify(value)}`;
+      return `${field}: ${value}`;
+    })
+    .filter(Boolean);
+  return pairs.join(" | ");
+}
+
 export const api = {
   health: () => request("/health/"),
 
-  listApplications: () => request("/applications/"),
+  listApplications: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.applicant_wallet) query.set("applicant_wallet", params.applicant_wallet);
+    if (params.funder_wallet) query.set("funder_wallet", params.funder_wallet);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request(`/applications/${suffix}`);
+  },
   submitApplication: (data) =>
     request("/applications/", {
       method: "POST",
