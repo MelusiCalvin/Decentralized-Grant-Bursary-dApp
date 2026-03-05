@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key-change-for-prod")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = ["'.onrender.com'"]
+ALLOWED_HOSTS = ["decentralized-grant-bursary-dapp-znni.onrender.com"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
