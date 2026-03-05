@@ -1,5 +1,4 @@
 from django.urls import path
-from views import home
 from .views import (
     ApplicationListCreateView,
     ApplicationReviewView,
@@ -10,6 +9,7 @@ from .views import (
     GrantRecordClaimView,
     GrantRecordFundingView,
     HealthView,
+    home,
 )
 
 
