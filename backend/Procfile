@@ -1,1 +1,1 @@
-web: gunicorn bursary.wsgi
+web: gunicorn backend.wsgi
