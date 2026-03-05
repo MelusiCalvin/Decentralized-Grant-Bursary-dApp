@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import home, path
 from .views import (
     ApplicationListCreateView,
     ApplicationReviewView,
@@ -13,6 +13,7 @@ from .views import (
 
 
 urlpatterns = [
+    path("", home, name="home"),
     path("health/", HealthView.as_view(), name="health"),
     path("applications/", ApplicationListCreateView.as_view(), name="application-list-create"),
     path(

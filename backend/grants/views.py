@@ -1,5 +1,5 @@
 from django.db.models import F
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -15,6 +15,8 @@ from .serializers import (
     GrantSerializer,
 )
 
+def home(request):
+    return render(request, "index.html")
 
 def log_event(action, actor_wallet="", grant=None, details=None):
     AuditEvent.objects.create(
