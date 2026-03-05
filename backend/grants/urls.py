@@ -1,4 +1,5 @@
-from django.urls import home, path
+from django.urls import path
+from views import home
 from .views import (
     ApplicationListCreateView,
     ApplicationReviewView,
