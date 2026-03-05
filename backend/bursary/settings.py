@@ -1,12 +1,13 @@
 from pathlib import Path
 import os
+import dj_database_url
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key-change-for-prod")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["'.onrender.com'"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -54,10 +55,9 @@ WSGI_APPLICATION = "bursary.wsgi.application"
 ASGI_APPLICATION = "bursary.asgi.application"
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL")
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = []
