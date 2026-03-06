@@ -1,13 +1,14 @@
+{%load static%}
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bursary Chain | GrantFlow Dashboard</title>
-    <link rel="icon" href="./assets/images/Coxygen logo.png" type="image/png"/>
+    <link rel="icon" href="{% static 'assets/images/Coxygen logo.png' %}" type="image/png"/>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="./js/script.js"></script>
-    <link rel="stylesheet" href="./assets/css/style.css"/>
+    <script src="{% static 'js/script.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'assets/css/style.css' %}"/>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -403,6 +404,6 @@
         </div>
       </main>
     </div>
-    <script type="module" src="./js/app.js"></script>
+    <script type="module" src="{% static 'js/app.js' %}"></script>
   </body>
 </html>
