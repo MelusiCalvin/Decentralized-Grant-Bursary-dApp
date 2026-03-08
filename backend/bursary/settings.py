@@ -5,7 +5,6 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-print(ROOT_DIR)
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key-change-for-prod")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = ["decentralized-grant-bursary-dapp-znni.onrender.com"]
@@ -23,10 +22,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -34,7 +33,14 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 ROOT_URLCONF = "bursary.urls"
 
 TEMPLATES = [
@@ -68,11 +74,12 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = ROOT_DIR / 'staticfiles'
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [
     ROOT_DIR / "static",
 ]
+WHITENOISE_USE_FINDERS = True
 MEDIA_URL = "/media/"
 MEDIA_ROOT = ROOT_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
