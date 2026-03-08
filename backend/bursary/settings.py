@@ -5,7 +5,7 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-
+print(ROOT_DIR)
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key-change-for-prod")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = ["decentralized-grant-bursary-dapp-znni.onrender.com"]
@@ -69,7 +69,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [
     ROOT_DIR / "static",
 ]
