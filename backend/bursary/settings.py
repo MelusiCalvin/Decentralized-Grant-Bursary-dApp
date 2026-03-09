@@ -1,6 +1,5 @@
 from pathlib import Path
 import os
-import dj_database_url
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -61,25 +60,12 @@ TEMPLATES = [
 WSGI_APPLICATION = "bursary.wsgi.application"
 ASGI_APPLICATION = "bursary.asgi.application"
 
-database_url = os.environ.get("DATABASE_URL", "").strip()
-if database_url:
-    db_ssl_require = os.environ.get("DATABASE_SSL_REQUIRE", "1" if not DEBUG else "0") == "1"
-    DATABASES = {
-        "default": dj_database_url.parse(
-            database_url,
-            conn_max_age=600,
-            ssl_require=db_ssl_require,
-        )
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-    DATABASES["default"].setdefault("OPTIONS", {})
-    DATABASES["default"]["OPTIONS"].setdefault("connect_timeout", 10)
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 AUTH_PASSWORD_VALIDATORS = []
 
