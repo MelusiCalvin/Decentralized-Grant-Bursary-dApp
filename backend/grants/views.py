@@ -1,5 +1,7 @@
 import os
 
+from django.conf import settings
+from django.db import connections
 from django.db.models import F
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -32,7 +34,16 @@ def log_event(action, actor_wallet="", grant=None, details=None):
 
 class HealthView(APIView):
     def get(self, request):
-        return Response({"ok": True, "service": "bursary-api"})
+        try:
+            with connections["default"].cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+            return Response({"ok": True, "service": "bursary-api", "database": "ok"})
+        except Exception as exc:
+            payload = {"ok": False, "service": "bursary-api", "database": "error"}
+            if settings.DEBUG:
+                payload["error"] = str(exc)
+            return Response(payload, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 class ApplicationListCreateView(generics.ListCreateAPIView):

@@ -61,11 +61,25 @@ TEMPLATES = [
 WSGI_APPLICATION = "bursary.wsgi.application"
 ASGI_APPLICATION = "bursary.asgi.application"
 
-RENDER_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///" + str(BASE_DIR / "db.sqlite3"))
-database_url = os.environ.get("DATABASE_URL", RENDER_DATABASE_URL)
-DATABASES = {
-    "default": dj_database_url.config(default=database_url, conn_max_age=600)
-}
+database_url = os.environ.get("DATABASE_URL", "").strip()
+if database_url:
+    db_ssl_require = os.environ.get("DATABASE_SSL_REQUIRE", "1" if not DEBUG else "0") == "1"
+    DATABASES = {
+        "default": dj_database_url.parse(
+            database_url,
+            conn_max_age=600,
+            ssl_require=db_ssl_require,
+        )
+    }
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"].setdefault("connect_timeout", 10)
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = []
 
