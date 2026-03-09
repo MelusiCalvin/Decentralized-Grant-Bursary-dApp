@@ -17,11 +17,9 @@ from .serializers import (
     GrantSerializer,
 )
 
-API_BASE_URL = os.getenv("API_BASE_URL", "/api")
-
 
 def home(request):
-    return render(request, "index.html", {"api_base_url": API_BASE_URL})
+    return render(request, "index.html")
 
 def log_event(action, actor_wallet="", grant=None, details=None):
     AuditEvent.objects.create(

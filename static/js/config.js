@@ -1,5 +1,5 @@
 export const APP_CONFIG = {
-  API_BASE_URL: document.getElementById("apiBaseUrl")?.value || "http://localhost:8000/api",
+  API_BASE_URL: "https://decentralized-grant-bursary-dapp-znni.onrender.com/api" || "http://localhost:8000/api",
   NETWORK: "Preprod",
   WALLET_NAME: "lace",
   BLOCKFROST_URL: "https://cardano-preprod.blockfrost.io/api/v0",
