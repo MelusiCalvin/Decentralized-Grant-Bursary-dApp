@@ -5,6 +5,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Application, AuditEvent, Grant
+from static.script.extra import API_BASE_URL
 from .serializers import (
     ApplicationReviewSerializer,
     ApplicationSerializer,
@@ -16,7 +17,7 @@ from .serializers import (
 )
 
 def home(request):
-    return render(request, "index.html")
+    return render(request, "index.html", {"api_base_url": API_BASE_URL})
 
 def log_event(action, actor_wallet="", grant=None, details=None):
     AuditEvent.objects.create(
