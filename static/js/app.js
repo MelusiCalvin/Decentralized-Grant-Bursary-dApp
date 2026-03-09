@@ -395,6 +395,19 @@ function walletApiOrError() {
   return walletApi;
 }
 
+async function requestReviewAuthorization({ action, applicationId, grantId = "" }) {
+  const adminWallet = walletAddressOrError();
+  const reviewPayload = JSON.stringify({
+    action,
+    applicationId,
+    grantId: grantId || null,
+    adminWallet,
+    reviewedAt: new Date().toISOString(),
+  });
+  await walletManager.signData(textToHex(reviewPayload));
+  return adminWallet;
+}
+
 function computeStats() {
   const grantsForStats =
     state.viewerRole === "funder"
@@ -1442,7 +1455,8 @@ async function handleCreateGrant(event) {
 
 async function quickReviewApplication(applicationId, nextStatus) {
   try {
-    const adminWallet = walletAddressOrError();
+    const actionLabel = nextStatus === "approved" ? "approve_application" : "reject_application";
+    const adminWallet = await requestReviewAuthorization({ action: actionLabel, applicationId });
     const application = state.applications.find((item) => item.id === applicationId);
     const payload = { status: nextStatus, admin_wallet: adminWallet };
     if (application?.grant) {
@@ -1520,9 +1534,13 @@ async function handleDetailReject() {
     if (state.viewerRole !== "funder") {
       throw new Error("Only funders can reject applications.");
     }
-    const adminWallet = walletAddressOrError();
     const application = getActiveApplicationOrError();
     if (!canViewApplication(application)) throw new Error("You can only reject applicants for your own grants.");
+    const adminWallet = await requestReviewAuthorization({
+      action: "reject_application",
+      applicationId: application.id,
+      grantId: application.grant,
+    });
     await api.reviewApplication(application.id, {
       status: "rejected",
       admin_wallet: adminWallet,
@@ -1676,4 +1694,3 @@ async function init() {
 }
 
 init();
-
