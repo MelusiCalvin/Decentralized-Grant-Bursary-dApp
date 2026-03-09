@@ -1,3 +1,5 @@
+import os
+
 from django.db.models import F
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -5,7 +7,6 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Application, AuditEvent, Grant
-from static.script.extra import API_BASE_URL
 from .serializers import (
     ApplicationReviewSerializer,
     ApplicationSerializer,
@@ -15,6 +16,9 @@ from .serializers import (
     GrantApproveSerializer,
     GrantSerializer,
 )
+
+API_BASE_URL = os.getenv("API_BASE_URL", "/api")
+
 
 def home(request):
     return render(request, "index.html", {"api_base_url": API_BASE_URL})
