@@ -1,6 +1,11 @@
 import { APP_CONFIG } from "./config.js";
 
 let lucidModulePromise = null;
+const LUCID_MODULE_URLS = [
+  "https://esm.sh/lucid-cardano@0.10.11?bundle",
+  "https://cdn.jsdelivr.net/npm/lucid-cardano@0.10.11/web/mod.js",
+  "https://unpkg.com/lucid-cardano@0.10.11/web/mod.js",
+];
 
 function ensureConfig() {
   if (!APP_CONFIG.BLOCKFROST_API_KEY || APP_CONFIG.BLOCKFROST_API_KEY === "YOUR_BLOCKFROST_KEY") {
@@ -10,7 +15,19 @@ function ensureConfig() {
 
 async function loadLucidModule() {
   if (!lucidModulePromise) {
-    lucidModulePromise = import("https://esm.sh/lucid-cardano@0.10.11?bundle");
+    lucidModulePromise = (async () => {
+      const failures = [];
+      for (const moduleUrl of LUCID_MODULE_URLS) {
+        try {
+          return await import(moduleUrl);
+        } catch (error) {
+          failures.push(`${moduleUrl}: ${error?.message || error}`);
+        }
+      }
+      throw new Error(
+        `Unable to load lucid-cardano from CDN. Check network/CSP. Attempts: ${failures.join(" | ")}`,
+      );
+    })();
   }
   return lucidModulePromise;
 }

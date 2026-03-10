@@ -161,6 +161,7 @@ class WalletManager {
     this.api = null;
     this.walletName = null;
     this.walletAddress = null;
+    this.walletAddressHex = null;
     this.network = DEFAULT_NETWORK;
     this.listeners = [];
   }
@@ -243,6 +244,7 @@ class WalletManager {
   async updateWalletAddress() {
     if (!this.api) {
       this.walletAddress = null;
+      this.walletAddressHex = null;
       return null;
     }
 
@@ -258,6 +260,10 @@ class WalletManager {
       }
     }
 
+    this.walletAddressHex =
+      typeof rawAddress === "string" && rawAddress.trim()
+        ? rawAddress.replace(/^0x/, "").trim()
+        : null;
     this.walletAddress = decodeAddressToBech32(rawAddress, this.network);
     return this.walletAddress;
   }
@@ -274,7 +280,14 @@ class WalletManager {
       throw new Error("Connected wallet does not support CIP-30 signData.");
     }
 
-    return this.api.signData(payloadHex, this.walletAddress);
+    if (!this.walletAddressHex) {
+      await this.updateWalletAddress();
+    }
+    if (!this.walletAddressHex) {
+      throw new Error("Unable to resolve wallet signing address.");
+    }
+
+    return this.api.signData(this.walletAddressHex, payloadHex);
   }
 
   disconnectWallet() {
@@ -282,6 +295,7 @@ class WalletManager {
     this.api = null;
     this.walletName = null;
     this.walletAddress = null;
+    this.walletAddressHex = null;
     localStorage.removeItem(WALLET_STORAGE_KEY);
     this.notify();
   }
