@@ -252,7 +252,9 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
 
 class ApplicationReviewSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=Application.Status.values)
+    status = serializers.ChoiceField(
+        choices=[Application.Status.APPROVED, Application.Status.REJECTED]
+    )
     grant_id = serializers.UUIDField(required=False)
 
 
@@ -329,6 +331,7 @@ class GrantApproveSerializer(serializers.Serializer):
 class FundingRecordSerializer(serializers.Serializer):
     admin_wallet = serializers.CharField(max_length=200)
     funded_tx_hash = serializers.CharField(max_length=128)
+    application_id = serializers.UUIDField()
 
 
 class ClaimRecordSerializer(serializers.Serializer):

@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     ApplicationListCreateView,
     ApplicationReviewView,
+    ApplicationWithdrawView,
     AuditEventListView,
     GrantApproveView,
     GrantClaimabilityView,
@@ -22,6 +23,11 @@ urlpatterns = [
         "applications/<uuid:application_id>/review/",
         ApplicationReviewView.as_view(),
         name="application-review",
+    ),
+    path(
+        "applications/<uuid:application_id>/withdraw/",
+        ApplicationWithdrawView.as_view(),
+        name="application-withdraw",
     ),
     path("grants/", GrantListCreateView.as_view(), name="grant-list-create"),
     path("grants/<uuid:grant_id>/delete/", GrantDeleteView.as_view(), name="grant-delete"),

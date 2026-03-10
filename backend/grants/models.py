@@ -71,6 +71,7 @@ class Application(TimestampedModel):
         PENDING = "pending", "Pending"
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
+        WITHDRAWN = "withdrawn", "Withdrawn"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     grant = models.ForeignKey(

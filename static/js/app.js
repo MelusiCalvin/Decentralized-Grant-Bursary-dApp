@@ -206,6 +206,8 @@ function statusBadgeClass(status) {
       return "bg-emerald-100 text-emerald-800";
     case "rejected":
       return "bg-rose-100 text-rose-800";
+    case "withdrawn":
+      return "bg-amber-100 text-amber-800";
     case "funded":
       return "bg-indigo-100 text-indigo-800";
     case "claimed":
@@ -213,6 +215,13 @@ function statusBadgeClass(status) {
     default:
       return "bg-slate-100 text-slate-700";
   }
+}
+
+function setButtonInteractivity(button, enabled) {
+  if (!button) return;
+  button.disabled = !enabled;
+  button.classList.toggle("opacity-50", !enabled);
+  button.classList.toggle("cursor-not-allowed", !enabled);
 }
 
 function normalizeCategoryKey(categoryValue) {
@@ -446,23 +455,40 @@ function getFilteredGrants() {
 }
 
 function canManageGrant(grant) {
-  return state.viewerRole === "funder" && walletEquals(grant?.admin_wallet, state.connectedWallet);
+  return Boolean(grant && state.connectedWallet && walletEquals(grant.admin_wallet, state.connectedWallet));
+}
+
+function isApplicationApplicant(application) {
+  return Boolean(
+    application &&
+      state.connectedWallet &&
+      walletEquals(application.wallet_address, state.connectedWallet),
+  );
+}
+
+function isApplicationGrantFunder(application) {
+  if (!application || !state.connectedWallet) return false;
+  const grant = state.grants.find((item) => item.id === application.grant);
+  return Boolean(grant && walletEquals(grant.admin_wallet, state.connectedWallet));
+}
+
+function canReviewApplication(application) {
+  return Boolean(application && isApplicationGrantFunder(application) && application.status === "pending");
+}
+
+function canWithdrawApplication(application) {
+  return Boolean(application && isApplicationApplicant(application) && application.status === "pending");
+}
+
+function canFundApplication(application) {
+  return Boolean(application && isApplicationGrantFunder(application) && application.status === "approved");
 }
 
 function getVisibleApplications() {
   if (!state.connectedWallet) return [];
-  if (state.viewerRole === "funder") {
-    return state.applications.filter((application) => {
-      const grant = state.grants.find((item) => item.id === application.grant);
-      return grant && walletEquals(grant.admin_wallet, state.connectedWallet);
-    });
-  }
-  if (state.viewerRole === "applicant") {
-    return state.applications.filter((application) =>
-      walletEquals(application.wallet_address, state.connectedWallet),
-    );
-  }
-  return [];
+  return state.applications.filter(
+    (application) => isApplicationApplicant(application) || isApplicationGrantFunder(application),
+  );
 }
 
 function getFilteredApplications() {
@@ -976,13 +1002,19 @@ function renderApplications() {
             const initials = escapeHtml(application.full_name?.trim()?.charAt(0)?.toUpperCase() || "?");
             const requested = Number(application.requested_amount_lovelace || 0);
             const released = Number(application.released_amount_lovelace || 0);
-            const adminButtons =
-              state.viewerRole === "funder"
-                ? `
-                    <button data-quick-review="${application.id}" data-review-status="approved" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700">Approve</button>
-                    <button data-quick-review="${application.id}" data-review-status="rejected" class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700">Reject</button>
-                  `
-                : "";
+            const canReview = canReviewApplication(application);
+            const showFunderActions = isApplicationGrantFunder(application);
+            const showApplicantActions = isApplicationApplicant(application);
+            const canWithdraw = canWithdrawApplication(application);
+            const funderButtons = showFunderActions
+              ? `
+                  <button data-quick-review="${application.id}" data-review-status="approved" ${canReview ? "" : "disabled"} class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition ${canReview ? "hover:bg-emerald-700" : "opacity-50 cursor-not-allowed"}">Approve</button>
+                  <button data-quick-review="${application.id}" data-review-status="rejected" ${canReview ? "" : "disabled"} class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white transition ${canReview ? "hover:bg-rose-700" : "opacity-50 cursor-not-allowed"}">Reject</button>
+                `
+              : "";
+            const withdrawButton = showApplicantActions
+              ? `<button data-withdraw-application="${application.id}" ${canWithdraw ? "" : "disabled"} class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition ${canWithdraw ? "hover:bg-amber-100" : "opacity-50 cursor-not-allowed"}">Withdraw</button>`
+              : "";
             return `
               <article class="rounded-2xl border border-stroke bg-panel p-5 shadow-card">
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -1008,7 +1040,8 @@ function renderApplications() {
                 <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3">
                   <p class="text-sm text-slate-500">Applied ${formatDate(application.created_at)}</p>
                   <div class="flex gap-2">
-                    ${adminButtons}
+                    ${withdrawButton}
+                    ${funderButtons}
                     <button data-open-application="${application.id}" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">View Details</button>
                   </div>
                 </div>
@@ -1020,6 +1053,10 @@ function renderApplications() {
 
 function buildTimelineItems(application) {
   const entries = [{ time: application.created_at, text: "Application submitted" }];
+  const withdrawnEvents = state.auditEvents.filter(
+    (event) => event.action === "APPLICATION_WITHDRAWN" && event.details?.application_id === application.id,
+  );
+  withdrawnEvents.forEach((event) => entries.push({ time: event.created_at, text: "Application withdrawn" }));
   const reviewEvents = state.auditEvents.filter(
     (event) => event.action === "APPLICATION_REVIEWED" && event.details?.application_id === application.id,
   );
@@ -1033,14 +1070,7 @@ function buildTimelineItems(application) {
 
 function canViewApplication(application) {
   if (!application || !state.connectedWallet) return false;
-  if (state.viewerRole === "funder") {
-    const grant = state.grants.find((item) => item.id === application.grant);
-    return Boolean(grant && walletEquals(grant.admin_wallet, state.connectedWallet));
-  }
-  if (state.viewerRole === "applicant") {
-    return walletEquals(application.wallet_address, state.connectedWallet);
-  }
-  return false;
+  return isApplicationApplicant(application) || isApplicationGrantFunder(application);
 }
 
 function renderApplicationMilestoneSubmissions(application) {
@@ -1082,6 +1112,11 @@ function renderApplicationDetail() {
     byId("appDetailRequested").textContent = "₳0";
     byId("appDetailTimeline").innerHTML = "";
     populateApplicationDetailGrantSelect("");
+    byId("appDetailApproveBtn").classList.add("hidden");
+    byId("appDetailRejectBtn").classList.add("hidden");
+    byId("appDetailFundBtn").classList.add("hidden");
+    byId("appDetailWithdrawBtn").classList.add("hidden");
+    byId("appDetailClaimBtn").classList.add("hidden");
     return;
   }
 
@@ -1096,6 +1131,7 @@ function renderApplicationDetail() {
     byId("appDetailApproveBtn").classList.add("hidden");
     byId("appDetailRejectBtn").classList.add("hidden");
     byId("appDetailFundBtn").classList.add("hidden");
+    byId("appDetailWithdrawBtn").classList.add("hidden");
     byId("appDetailClaimBtn").classList.add("hidden");
     byId("appDetailGrantSelect").disabled = true;
     byId("appDetailUnlockInput").disabled = true;
@@ -1120,22 +1156,31 @@ function renderApplicationDetail() {
   `;
 
   populateApplicationDetailGrantSelect(application.grant || "");
-  if (state.viewerRole === "applicant" && application.grant) {
+  if (isApplicationApplicant(application) && application.grant) {
     byId("appDetailGrantSelect").innerHTML = `<option value="${application.grant}">${application.grant}</option>`;
     byId("appDetailGrantSelect").value = application.grant;
   }
   byId("appDetailApproveAmountAda").value = lovelaceToAdaNumber(requestedLovelace || 0) || 0;
   byId("appDetailUnlockInput").value = "";
 
-  const isFunder = state.viewerRole === "funder";
-  const isApplicant = state.viewerRole === "applicant";
+  const isFunder = isApplicationGrantFunder(application);
+  const isApplicant = isApplicationApplicant(application);
+  const canReview = canReviewApplication(application);
+  const canFund = canFundApplication(application);
+  const canWithdraw = canWithdrawApplication(application);
+  const canEditDecisionInputs = isFunder && application.status === "pending";
   byId("appDetailApproveBtn").classList.toggle("hidden", !isFunder);
   byId("appDetailRejectBtn").classList.toggle("hidden", !isFunder);
   byId("appDetailFundBtn").classList.toggle("hidden", !isFunder);
+  byId("appDetailWithdrawBtn").classList.toggle("hidden", !isApplicant);
   byId("appDetailClaimBtn").classList.toggle("hidden", !isApplicant);
   byId("appDetailGrantSelect").disabled = !isFunder;
-  byId("appDetailUnlockInput").disabled = !isFunder;
-  byId("appDetailApproveAmountAda").disabled = !isFunder;
+  byId("appDetailUnlockInput").disabled = !canEditDecisionInputs;
+  byId("appDetailApproveAmountAda").disabled = !canEditDecisionInputs;
+  setButtonInteractivity(byId("appDetailApproveBtn"), canReview);
+  setButtonInteractivity(byId("appDetailRejectBtn"), canReview);
+  setButtonInteractivity(byId("appDetailFundBtn"), canFund);
+  setButtonInteractivity(byId("appDetailWithdrawBtn"), canWithdraw);
 
   const timeline = buildTimelineItems(application);
   byId("appDetailTimeline").innerHTML = timeline
@@ -1489,8 +1534,11 @@ async function handleDeleteGrant(grantId) {
 async function quickReviewApplication(applicationId, nextStatus) {
   try {
     const actionLabel = nextStatus === "approved" ? "approve_application" : "reject_application";
-    const adminWallet = await requestReviewAuthorization({ action: actionLabel, applicationId });
     const application = state.applications.find((item) => item.id === applicationId);
+    if (!canReviewApplication(application)) {
+      throw new Error("Only pending applications can be approved or rejected.");
+    }
+    const adminWallet = await requestReviewAuthorization({ action: actionLabel, applicationId });
     const payload = { status: nextStatus, admin_wallet: adminWallet };
     if (application?.grant) {
       payload.grant_id = application.grant;
@@ -1518,11 +1566,14 @@ function getActiveApplicationOrError() {
 
 async function handleDetailApprove() {
   try {
-    if (state.viewerRole !== "funder") {
-      throw new Error("Only funders can approve applications.");
+    const application = getActiveApplicationOrError();
+    if (!isApplicationGrantFunder(application)) {
+      throw new Error("Only the grant funder can approve applications.");
     }
     const adminWallet = walletAddressOrError();
-    const application = getActiveApplicationOrError();
+    if (application.status !== "pending") {
+      throw new Error("Only pending applications can be approved.");
+    }
     const grant = getSelectedGrantFromDetail();
     if (!canManageGrant(grant)) throw new Error("You can only approve applicants for your own grants.");
     const amountLovelace = toLovelace(byId("appDetailApproveAmountAda").value);
@@ -1564,10 +1615,13 @@ async function handleDetailApprove() {
 
 async function handleDetailReject() {
   try {
-    if (state.viewerRole !== "funder") {
-      throw new Error("Only funders can reject applications.");
-    }
     const application = getActiveApplicationOrError();
+    if (!isApplicationGrantFunder(application)) {
+      throw new Error("Only the grant funder can reject applications.");
+    }
+    if (application.status !== "pending") {
+      throw new Error("Only pending applications can be rejected.");
+    }
     if (!canViewApplication(application)) throw new Error("You can only reject applicants for your own grants.");
     const adminWallet = await requestReviewAuthorization({
       action: "reject_application",
@@ -1588,12 +1642,15 @@ async function handleDetailReject() {
 
 async function handleDetailFund() {
   try {
-    if (state.viewerRole !== "funder") {
-      throw new Error("Only funders can fund grants.");
+    const application = getActiveApplicationOrError();
+    if (!isApplicationGrantFunder(application)) {
+      throw new Error("Only the grant funder can fund this application.");
     }
     const adminWallet = walletAddressOrError();
     const walletApi = walletApiOrError();
-    const application = getActiveApplicationOrError();
+    if (application.status !== "approved") {
+      throw new Error("Only approved applications can be funded.");
+    }
     const grant = getSelectedGrantFromDetail();
     if (!canManageGrant(grant)) throw new Error("You can only fund your own grants.");
     const amountLovelace =
@@ -1613,6 +1670,7 @@ async function handleDetailFund() {
     await api.recordFunding(grant.id, {
       admin_wallet: adminWallet,
       funded_tx_hash: txHash,
+      application_id: application.id,
     });
     await refreshData();
     setBanner(`Funding transaction submitted: ${txHash}`, "success");
@@ -1622,10 +1680,34 @@ async function handleDetailFund() {
   }
 }
 
+async function handleApplicationWithdraw(applicationId = state.activeApplicationId) {
+  try {
+    const application = state.applications.find((item) => item.id === applicationId);
+    if (!application) throw new Error("Application not found.");
+    if (!canWithdrawApplication(application)) {
+      throw new Error("Only your pending applications can be withdrawn.");
+    }
+
+    const confirmed = window.confirm("Withdraw this application? This action cannot be undone.");
+    if (!confirmed) return;
+
+    const walletAddress = walletAddressOrError();
+    await api.withdrawApplication(application.id, { wallet_address: walletAddress });
+    await refreshData();
+    setBanner("Application withdrawn.", "success");
+    if (state.activeRoute === "application-detail") {
+      renderApplicationDetail();
+    }
+  } catch (error) {
+    setBanner(error.message, "error");
+  }
+}
+
 async function handleDetailClaim() {
   try {
-    if (state.viewerRole !== "applicant") {
-      throw new Error("Only applicant wallets can claim from application view.");
+    const application = getActiveApplicationOrError();
+    if (!isApplicationApplicant(application)) {
+      throw new Error("Only the applicant wallet can claim from this application.");
     }
     const walletApi = walletApiOrError();
     const beneficiaryWallet = walletAddressOrError();
@@ -1654,15 +1736,16 @@ async function handleDetailClaim() {
 
 function setupApplicationActions() {
   byId("applicationsList").addEventListener("click", async (event) => {
+    const withdraw = event.target.closest("[data-withdraw-application]");
+    if (withdraw) {
+      await handleApplicationWithdraw(withdraw.dataset.withdrawApplication);
+      return;
+    }
     const quick = event.target.closest("[data-quick-review]");
     if (quick) {
-      if (state.viewerRole !== "funder") {
-        setBanner("Only funders can review applications.", "error");
-        return;
-      }
       const target = state.applications.find((item) => item.id === quick.dataset.quickReview);
-      if (!canViewApplication(target)) {
-        setBanner("You can only review applications linked to your grants.", "error");
+      if (!canReviewApplication(target)) {
+        setBanner("Only pending applications linked to your grants can be reviewed.", "error");
         return;
       }
       await quickReviewApplication(quick.dataset.quickReview, quick.dataset.reviewStatus);
@@ -1674,6 +1757,7 @@ function setupApplicationActions() {
   byId("appDetailApproveBtn").addEventListener("click", handleDetailApprove);
   byId("appDetailRejectBtn").addEventListener("click", handleDetailReject);
   byId("appDetailFundBtn").addEventListener("click", handleDetailFund);
+  byId("appDetailWithdrawBtn").addEventListener("click", () => handleApplicationWithdraw());
   byId("appDetailClaimBtn").addEventListener("click", handleDetailClaim);
 }
 

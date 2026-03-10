@@ -66,5 +66,7 @@ Set values in `js/config.js`:
 ## Documentation
 
 - Full technical documentation: `docs/full-application-documentation.md`
+- ERD: `docs/erd.md`
+- Use cases: `docs/use-cases.md`
 
 # Decentralized-Grant-Bursary-dApp

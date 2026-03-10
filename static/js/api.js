@@ -57,6 +57,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  withdrawApplication: (applicationId, data) =>
+    request(`/applications/${applicationId}/withdraw/`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   listGrants: () => request("/grants/"),
   createGrant: (data) =>

@@ -101,6 +101,12 @@ class ApplicationReviewView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        if application.status != Application.Status.PENDING:
+            return Response(
+                {"error": "Only pending applications can be reviewed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         application.status = status_value
         application.save(update_fields=["status", "grant", "updated_at"])
 
@@ -109,6 +115,41 @@ class ApplicationReviewView(APIView):
             actor_wallet=admin_wallet,
             grant=application.grant,
             details={"application_id": str(application.id), "status": status_value},
+        )
+        return Response(ApplicationSerializer(application).data)
+
+
+class ApplicationWithdrawView(APIView):
+    def post(self, request, application_id):
+        application = get_object_or_404(Application, id=application_id)
+        wallet_address = request.data.get("wallet_address", "").strip()
+
+        if not wallet_address:
+            return Response(
+                {"error": "wallet_address is required to withdraw an application."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if application.wallet_address != wallet_address:
+            return Response(
+                {"error": "You can only withdraw your own applications."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if application.status != Application.Status.PENDING:
+            return Response(
+                {"error": "Only pending applications can be withdrawn."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        application.status = Application.Status.WITHDRAWN
+        application.save(update_fields=["status", "updated_at"])
+
+        log_event(
+            action="APPLICATION_WITHDRAWN",
+            actor_wallet=wallet_address,
+            grant=application.grant,
+            details={"application_id": str(application.id)},
         )
         return Response(ApplicationSerializer(application).data)
 
@@ -237,6 +278,22 @@ class GrantRecordFundingView(APIView):
             return Response(
                 {"error": "Only the owning admin wallet can record funding."},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+
+        application = get_object_or_404(
+            Application,
+            id=data["application_id"],
+            grant=grant,
+        )
+        if application.status != Application.Status.APPROVED:
+            return Response(
+                {"error": "Only approved applications can be funded."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if grant.beneficiary_wallet and grant.beneficiary_wallet != application.wallet_address:
+            return Response(
+                {"error": "Grant beneficiary does not match the selected application."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         grant.funded_tx_hash = data["funded_tx_hash"]
