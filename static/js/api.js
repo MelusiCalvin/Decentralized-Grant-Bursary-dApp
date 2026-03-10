@@ -64,6 +64,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  deleteGrant: (grantId, data) =>
+    request(`/grants/${grantId}/delete/`, {
+      method: "DELETE",
+      body: JSON.stringify(data),
+    }),
   approveGrant: (grantId, data) =>
     request(`/grants/${grantId}/approve/`, {
       method: "POST",

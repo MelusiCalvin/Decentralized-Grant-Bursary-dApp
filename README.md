@@ -63,4 +63,8 @@ Set values in `js/config.js`:
 - Admin authentication + signed backend actions
 - Plutus compilation/deployment pipeline
 
+## Documentation
+
+- Full technical documentation: `docs/full-application-documentation.md`
+
 # Decentralized-Grant-Bursary-dApp

@@ -78,7 +78,7 @@ class Application(TimestampedModel):
         related_name="applications",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
     )
 
     wallet_address = models.CharField(max_length=200)

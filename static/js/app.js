@@ -851,6 +851,7 @@ function renderGrants() {
             const distributed = Number(grant.distributed_lovelace || (grant.paid ? grant.amount_lovelace : 0) || 0);
             const progress = total > 0 ? Math.min(100, Math.round((distributed / total) * 100)) : 0;
             const canManage = canManageGrant(grant);
+            const actionsGridClass = canManage ? "mt-4 grid grid-cols-3 gap-2" : "mt-4 grid grid-cols-2 gap-2";
             const actionButtons = canManage
               ? `
                   <button data-filter-apps-grant="${grant.id}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
@@ -858,6 +859,9 @@ function renderGrants() {
                   </button>
                   <button data-open-create-with-grant="${grant.id}" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700">
                     Manage
+                  </button>
+                  <button data-delete-grant="${grant.id}" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">
+                    Delete Grant
                   </button>
                 `
               : state.viewerRole === "guest"
@@ -902,7 +906,7 @@ function renderGrants() {
                   <span>${grant.application_deadline ? `Deadline ${formatDate(grant.application_deadline)}` : "No deadline"}</span>
                   <span>Max ${formatAdaFromLovelace(grant.max_per_beneficiary_lovelace || grant.amount_lovelace)}</span>
                 </div>
-                <div class="mt-4 grid grid-cols-2 gap-2">
+                <div class="${actionsGridClass}">
                   ${actionButtons}
                 </div>
               </article>
@@ -1191,7 +1195,7 @@ function setupNavigation() {
   byId("createGrantCancelBtn").addEventListener("click", () => navigateTo("grants"));
   byId("appDetailBackBtn").addEventListener("click", () => navigateTo("applications"));
 
-  document.body.addEventListener("click", (event) => {
+  document.body.addEventListener("click", async (event) => {
     const routeJump = event.target.closest("[data-route-jump]");
     if (routeJump) {
       if (state.viewerRole === "guest" && routeJump.dataset.routeJump !== "dashboard") {
@@ -1244,6 +1248,11 @@ function setupNavigation() {
       }
       navigateTo("create-grant");
       setBanner(`Managing grant ${openCreate.dataset.openCreateWithGrant}. Update values and submit.`, "info");
+      return;
+    }
+    const deleteGrant = event.target.closest("[data-delete-grant]");
+    if (deleteGrant) {
+      await handleDeleteGrant(deleteGrant.dataset.deleteGrant);
     }
   });
 
@@ -1448,6 +1457,30 @@ async function handleCreateGrant(event) {
     await refreshData();
     setBanner("Grant created successfully.", "success");
     navigateTo("grants");
+  } catch (error) {
+    setBanner(error.message, "error");
+  }
+}
+
+async function handleDeleteGrant(grantId) {
+  try {
+    const grant = state.grants.find((item) => item.id === grantId);
+    if (!grant) throw new Error("Grant not found.");
+    if (!canManageGrant(grant)) throw new Error("You can only delete grants you created.");
+
+    const adminWallet = walletAddressOrError();
+    const relatedCount = state.applications.filter((item) => item.grant === grantId).length;
+    const confirmed = window.confirm(
+      `Delete "${grant.title || "this grant"}"? This will permanently delete ${relatedCount} related application(s).`,
+    );
+    if (!confirmed) return;
+
+    await api.deleteGrant(grantId, { admin_wallet: adminWallet });
+    await refreshData();
+    setBanner(`Grant deleted successfully. Removed ${relatedCount} related application(s).`, "success");
+    if (state.activeRoute === "application-detail") {
+      navigateTo("applications");
+    }
   } catch (error) {
     setBanner(error.message, "error");
   }

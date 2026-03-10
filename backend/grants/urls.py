@@ -5,6 +5,7 @@ from .views import (
     AuditEventListView,
     GrantApproveView,
     GrantClaimabilityView,
+    GrantDeleteView,
     GrantListCreateView,
     GrantRecordClaimView,
     GrantRecordFundingView,
@@ -23,6 +24,7 @@ urlpatterns = [
         name="application-review",
     ),
     path("grants/", GrantListCreateView.as_view(), name="grant-list-create"),
+    path("grants/<uuid:grant_id>/delete/", GrantDeleteView.as_view(), name="grant-delete"),
     path("grants/<uuid:grant_id>/approve/", GrantApproveView.as_view(), name="grant-approve"),
     path(
         "grants/<uuid:grant_id>/record-funding/",

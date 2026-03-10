@@ -1,5 +1,3 @@
-import os
-
 from django.conf import settings
 from django.db import connections
 from django.db.models import F
@@ -126,6 +124,50 @@ class GrantListCreateView(generics.ListCreateAPIView):
             actor_wallet=grant.admin_wallet,
             grant=grant,
             details={"grant_id": str(grant.id)},
+        )
+
+
+class GrantDeleteView(APIView):
+    def delete(self, request, grant_id):
+        grant = get_object_or_404(Grant, id=grant_id)
+        admin_wallet = (
+            request.data.get("admin_wallet", "")
+            or request.query_params.get("admin_wallet", "")
+        ).strip()
+
+        if not admin_wallet:
+            return Response(
+                {"error": "admin_wallet is required to delete a grant."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if grant.admin_wallet != admin_wallet:
+            return Response(
+                {"error": "Only the funder who created this grant can delete it."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        related_applications_count = Application.objects.filter(grant=grant).count()
+        deleted_grant_id = str(grant.id)
+        deleted_grant_title = grant.title
+        grant.delete()
+
+        log_event(
+            action="GRANT_DELETED",
+            actor_wallet=admin_wallet,
+            details={
+                "grant_id": deleted_grant_id,
+                "grant_title": deleted_grant_title,
+                "deleted_applications_count": related_applications_count,
+            },
+        )
+
+        return Response(
+            {
+                "ok": True,
+                "grant_id": deleted_grant_id,
+                "deleted_applications_count": related_applications_count,
+            }
         )
 
 
