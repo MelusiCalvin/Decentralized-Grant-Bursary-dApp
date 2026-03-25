@@ -1,6 +1,5 @@
 const WALLET_STORAGE_KEY = "grant_wallet_connection_v1";
 const DEFAULT_NETWORK = "preprod";
-const DEFAULT_WALLET_INJECTION_TIMEOUT_MS = 10000;
 
 const BECH32_CHARS = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 const BECH32_GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
@@ -185,31 +184,15 @@ class WalletManager {
     if (typeof window === "undefined" || !window.cardano) {
       return null;
     }
-    const normalizedTarget = String(walletName || "lace").trim().toLowerCase();
-    const installed = this.detectInstalledWallets();
-    if (!installed.length) {
-      return null;
-    }
-
-    const exactMatch = installed.find((name) => name.toLowerCase() === normalizedTarget);
-    if (exactMatch) {
-      return { name: exactMatch, provider: window.cardano[exactMatch] };
-    }
-
-    if (installed.length === 1) {
-      const fallbackName = installed[0];
-      return { name: fallbackName, provider: window.cardano[fallbackName] };
-    }
-
-    return null;
+    return window.cardano[walletName] || null;
   }
 
-  async waitForWalletInjection(walletName = "lace", timeoutMs = DEFAULT_WALLET_INJECTION_TIMEOUT_MS) {
+  async waitForWalletInjection(walletName = "lace", timeoutMs = 3000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      const walletInfo = await this.detectWallet(walletName);
-      if (walletInfo) {
-        return walletInfo;
+      const wallet = await this.detectWallet(walletName);
+      if (wallet) {
+        return wallet;
       }
       await new Promise((resolve) => setTimeout(resolve, 120));
     }
@@ -217,35 +200,22 @@ class WalletManager {
   }
 
   async connectWallet(walletName = "lace", network = DEFAULT_NETWORK) {
-    const walletInfo = await this.waitForWalletInjection(walletName);
-    if (!walletInfo?.provider) {
-      const installed = this.detectInstalledWallets();
-      if (!installed.length) {
-        throw new Error("No CIP-30 wallet detected. Install/enable Lace, then refresh and try again.");
-      }
-      throw new Error(
-        `Wallet "${walletName}" not found. Detected: ${installed.join(", ")}. Update js/config.js WALLET_NAME if needed.`,
-      );
+    const provider = await this.waitForWalletInjection(walletName);
+    if (!provider) {
+      throw new Error(`${walletName} wallet not found. Install/enable Lace and refresh.`);
     }
 
-    const { provider, name: resolvedWalletName } = walletInfo;
-    let api;
-    try {
-      api = await provider.enable();
-    } catch (error) {
-      const detail = error?.info || error?.message || String(error);
-      throw new Error(`Wallet connection was rejected or failed: ${detail}`);
-    }
+    const api = await provider.enable();
     this.provider = provider;
     this.api = api;
-    this.walletName = resolvedWalletName || walletName;
+    this.walletName = walletName;
     this.network = network;
     await this.updateWalletAddress();
 
     localStorage.setItem(
       WALLET_STORAGE_KEY,
       JSON.stringify({
-        walletName: resolvedWalletName || walletName,
+        walletName,
         network,
         connectedAt: new Date().toISOString(),
       }),

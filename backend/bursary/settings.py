@@ -76,9 +76,17 @@ USE_TZ = True
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [
-    ROOT_DIR / "static",
+STATICFILES_SOURCE_CANDIDATES = [
+    ROOT_DIR / "static",   # repo root/static
+    BASE_DIR / "static",   # backend/static (monorepo subdir deploy fallback)
 ]
+STATICFILES_DIRS = []
+for candidate in STATICFILES_SOURCE_CANDIDATES:
+    if candidate.exists():
+        STATICFILES_DIRS.append(candidate)
+
+if not STATICFILES_DIRS:
+    STATICFILES_DIRS = [ROOT_DIR / "static"]
 WHITENOISE_USE_FINDERS = True
 MEDIA_URL = "/media/"
 MEDIA_ROOT = ROOT_DIR / "media"
