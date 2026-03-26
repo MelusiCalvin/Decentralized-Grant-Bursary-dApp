@@ -1,9 +1,12 @@
 from django.urls import path
 from .views import (
+    ApplicantReportExportView,
     ApplicationListCreateView,
     ApplicationReviewView,
     ApplicationWithdrawView,
     AuditEventListView,
+    ConnectionLogCreateView,
+    GrantReportExportView,
     GrantApproveView,
     GrantClaimabilityView,
     GrantDeleteView,
@@ -18,6 +21,7 @@ from .views import (
 urlpatterns = [
     path("", home, name="home"),
     path("health/", HealthView.as_view(), name="health"),
+    path("connections/", ConnectionLogCreateView.as_view(), name="connection-log-create"),
     path("applications/", ApplicationListCreateView.as_view(), name="application-list-create"),
     path(
         "applications/<uuid:application_id>/review/",
@@ -48,4 +52,6 @@ urlpatterns = [
         name="grant-record-claim",
     ),
     path("audit-events/", AuditEventListView.as_view(), name="audit-events"),
+    path("reports/grants/", GrantReportExportView.as_view(), name="grant-report-export"),
+    path("reports/applicants/", ApplicantReportExportView.as_view(), name="applicant-report-export"),
 ]

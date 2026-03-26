@@ -21,6 +21,37 @@ async function request(path, options = {}) {
   return payload;
 }
 
+function inferFileName(contentDisposition, fallbackName) {
+  const match = /filename\*?=(?:UTF-8''|\"?)([^\";\n]+)/i.exec(contentDisposition || "");
+  if (!match || !match[1]) return fallbackName;
+  try {
+    return decodeURIComponent(match[1].replaceAll('"', "").trim());
+  } catch (_error) {
+    return match[1].replaceAll('"', "").trim() || fallbackName;
+  }
+}
+
+async function requestFile(path, fallbackFileName, options = {}) {
+  const response = await fetch(`${APP_CONFIG.API_BASE_URL}${path}`, {
+    headers: {
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  if (!response.ok) {
+    const isJson = response.headers.get("content-type")?.includes("application/json");
+    const payload = isJson ? await response.json() : await response.text();
+    const detail = formatApiError(payload);
+    throw new Error(`HTTP ${response.status} on ${path}: ${detail || "Request failed."}`);
+  }
+
+  const contentDisposition = response.headers.get("content-disposition") || "";
+  const fileName = inferFileName(contentDisposition, fallbackFileName);
+  const blob = await response.blob();
+  return { blob, fileName };
+}
+
 function formatApiError(payload) {
   if (!payload) return "";
   if (typeof payload === "string") return payload;
@@ -94,4 +125,13 @@ export const api = {
 
   listAuditEvents: (grantId = "") =>
     request(`/audit-events/${grantId ? `?grant_id=${encodeURIComponent(grantId)}` : ""}`),
+  logConnection: (data) =>
+    request("/connections/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  exportGrantsReport: (format = "csv") =>
+    requestFile(`/reports/grants/?format=${encodeURIComponent(format)}`, "grants_report.csv"),
+  exportApplicantsReport: (format = "csv") =>
+    requestFile(`/reports/applicants/?format=${encodeURIComponent(format)}`, "applicants_report.csv"),
 };

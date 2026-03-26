@@ -129,7 +129,7 @@
 
           <section id="view-grants" class="view-section">
             <article class="rounded-2xl border border-stroke bg-panel p-4 shadow-card">
-              <div class="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+              <div class="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
                 <input id="grantsSearchInput" placeholder="Search grants..." class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
                 <select id="grantsStatusFilter" class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
                   <option value="all">All Status</option>
@@ -141,6 +141,9 @@
                 <select id="grantsCategoryFilter" class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
                   <option value="all">All Categories</option>
                 </select>
+                <button id="exportGrantsReportBtn" type="button" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                  Export Grants Report
+                </button>
               </div>
             </article>
             <p id="grantsCountLabel" class="mt-4 text-sm font-medium text-slate-600">Showing 0 grants</p>
@@ -313,7 +316,7 @@
             </div>
 
             <article class="mt-4 rounded-2xl border border-stroke bg-panel p-4 shadow-card">
-              <div class="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+              <div class="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
                 <input id="appsSearchInput" placeholder="Search by name, email, wallet..." class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400" />
                 <select id="appsStatusFilter" class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
                   <option value="all">All Status</option>
@@ -325,6 +328,9 @@
                 <select id="appsGrantFilter" class="rounded-xl border border-stroke px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400">
                   <option value="all">All Grants</option>
                 </select>
+                <button id="exportApplicantsReportBtn" type="button" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                  Export Applicants Report
+                </button>
               </div>
             </article>
 

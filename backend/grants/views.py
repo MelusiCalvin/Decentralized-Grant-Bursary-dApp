@@ -1,17 +1,20 @@
+import csv
 from django.conf import settings
 from django.db import connections
-from django.db.models import F
+from django.db.models import Count, F
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Application, AuditEvent, Grant
+from .models import Application, AuditEvent, ConnectionLog, Grant
 from .serializers import (
     ApplicationReviewSerializer,
     ApplicationSerializer,
     AuditEventSerializer,
     ClaimRecordSerializer,
+    ConnectionLogSerializer,
     FundingRecordSerializer,
     GrantApproveSerializer,
     GrantSerializer,
@@ -30,6 +33,43 @@ def log_event(action, actor_wallet="", grant=None, details=None):
     )
 
 
+def _get_client_ip(request):
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return (request.META.get("REMOTE_ADDR", "") or "").strip()
+
+
+def _build_connection_summary_by_wallet():
+    summaries = {}
+    for connection in ConnectionLog.objects.all().order_by("-created_at"):
+        wallet = (connection.wallet_address or "").strip()
+        if not wallet:
+            continue
+        current = summaries.get(wallet)
+        if not current:
+            current = {
+                "connection_count": 0,
+                "last_connected_at": connection.created_at.isoformat() if connection.created_at else "",
+                "last_connected_device": connection.device or "",
+                "last_connected_location": connection.location_display(),
+                "last_connected_ip": connection.ip_address or "",
+            }
+            summaries[wallet] = current
+        current["connection_count"] += 1
+    return summaries
+
+
+def _csv_response(filename, fieldnames, rows):
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    writer = csv.DictWriter(response, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(row)
+    return response
+
+
 class HealthView(APIView):
     def get(self, request):
         try:
@@ -42,6 +82,27 @@ class HealthView(APIView):
             if settings.DEBUG:
                 payload["error"] = str(exc)
             return Response(payload, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class ConnectionLogCreateView(generics.CreateAPIView):
+    serializer_class = ConnectionLogSerializer
+
+    def perform_create(self, serializer):
+        connection = serializer.save(ip_address=_get_client_ip(self.request))
+        log_event(
+            action="WALLET_CONNECTED",
+            actor_wallet=connection.wallet_address,
+            details={
+                "connection_log_id": str(connection.id),
+                "device": connection.device or "",
+                "location": connection.location_display(),
+                "ip_address": connection.ip_address or "",
+                "connected_at_client": connection.connected_at_client.isoformat()
+                if connection.connected_at_client
+                else "",
+                "client_timezone": connection.client_timezone or "",
+            },
+        )
 
 
 class ApplicationListCreateView(generics.ListCreateAPIView):
@@ -370,6 +431,151 @@ class GrantRecordClaimView(APIView):
             details={"claim_tx_hash": data["claim_tx_hash"]},
         )
         return Response(GrantSerializer(grant).data)
+
+
+class GrantReportExportView(APIView):
+    def get(self, request):
+        export_format = request.query_params.get("format", "csv").strip().lower()
+        connection_summary = _build_connection_summary_by_wallet()
+
+        grants = (
+            Grant.objects.annotate(applicants_count=Count("applications"))
+            .order_by("-created_at")
+        )
+        rows = []
+        for grant in grants:
+            connection = connection_summary.get(grant.admin_wallet, {})
+            rows.append(
+                {
+                    "grant_id": str(grant.id),
+                    "title": grant.title,
+                    "category": grant.category,
+                    "status": grant.status,
+                    "admin_wallet": grant.admin_wallet,
+                    "beneficiary_wallet": grant.beneficiary_wallet,
+                    "application_deadline": grant.application_deadline.isoformat()
+                    if grant.application_deadline
+                    else "",
+                    "total_funding_lovelace": grant.total_funding_lovelace,
+                    "max_per_beneficiary_lovelace": grant.max_per_beneficiary_lovelace,
+                    "distributed_lovelace": grant.distributed_lovelace,
+                    "amount_lovelace": grant.amount_lovelace,
+                    "applicants_count": grant.applicants_count,
+                    "created_at": grant.created_at.isoformat() if grant.created_at else "",
+                    "updated_at": grant.updated_at.isoformat() if grant.updated_at else "",
+                    "admin_connection_count": connection.get("connection_count", 0),
+                    "admin_last_connected_at": connection.get("last_connected_at", ""),
+                    "admin_last_connected_device": connection.get("last_connected_device", ""),
+                    "admin_last_connected_location": connection.get("last_connected_location", ""),
+                    "admin_last_connected_ip": connection.get("last_connected_ip", ""),
+                }
+            )
+
+        if export_format == "json":
+            return Response(
+                {
+                    "generated_at": timezone.now().isoformat(),
+                    "count": len(rows),
+                    "rows": rows,
+                }
+            )
+
+        if export_format != "csv":
+            return Response(
+                {"error": "Unsupported format. Use format=csv or format=json."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fieldnames = [
+            "grant_id",
+            "title",
+            "category",
+            "status",
+            "admin_wallet",
+            "beneficiary_wallet",
+            "application_deadline",
+            "total_funding_lovelace",
+            "max_per_beneficiary_lovelace",
+            "distributed_lovelace",
+            "amount_lovelace",
+            "applicants_count",
+            "created_at",
+            "updated_at",
+            "admin_connection_count",
+            "admin_last_connected_at",
+            "admin_last_connected_device",
+            "admin_last_connected_location",
+            "admin_last_connected_ip",
+        ]
+        return _csv_response("grants_report.csv", fieldnames, rows)
+
+
+class ApplicantReportExportView(APIView):
+    def get(self, request):
+        export_format = request.query_params.get("format", "csv").strip().lower()
+        connection_summary = _build_connection_summary_by_wallet()
+
+        applications = Application.objects.select_related("grant").order_by("-created_at")
+        rows = []
+        for application in applications:
+            connection = connection_summary.get(application.wallet_address, {})
+            rows.append(
+                {
+                    "application_id": str(application.id),
+                    "grant_id": str(application.grant_id) if application.grant_id else "",
+                    "grant_title": application.grant.title if application.grant else "",
+                    "applicant_name": application.full_name,
+                    "email": application.email,
+                    "organization": application.organization,
+                    "wallet_address": application.wallet_address,
+                    "status": application.status,
+                    "requested_amount_lovelace": application.requested_amount_lovelace,
+                    "released_amount_lovelace": application.released_amount_lovelace,
+                    "created_at": application.created_at.isoformat() if application.created_at else "",
+                    "updated_at": application.updated_at.isoformat() if application.updated_at else "",
+                    "applicant_connection_count": connection.get("connection_count", 0),
+                    "applicant_last_connected_at": connection.get("last_connected_at", ""),
+                    "applicant_last_connected_device": connection.get("last_connected_device", ""),
+                    "applicant_last_connected_location": connection.get("last_connected_location", ""),
+                    "applicant_last_connected_ip": connection.get("last_connected_ip", ""),
+                }
+            )
+
+        if export_format == "json":
+            return Response(
+                {
+                    "generated_at": timezone.now().isoformat(),
+                    "count": len(rows),
+                    "rows": rows,
+                }
+            )
+
+        if export_format != "csv":
+            return Response(
+                {"error": "Unsupported format. Use format=csv or format=json."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        fieldnames = [
+            "application_id",
+            "grant_id",
+            "grant_title",
+            "applicant_name",
+            "email",
+            "organization",
+            "wallet_address",
+            "status",
+            "requested_amount_lovelace",
+            "released_amount_lovelace",
+            "created_at",
+            "updated_at",
+            "applicant_connection_count",
+            "applicant_last_connected_at",
+            "applicant_last_connected_device",
+            "applicant_last_connected_location",
+            "applicant_last_connected_ip",
+        ]
+        return _csv_response("applicants_report.csv", fieldnames, rows)
 
 
 class AuditEventListView(generics.ListAPIView):

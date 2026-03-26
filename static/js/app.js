@@ -61,6 +61,8 @@ const state = {
   },
 };
 
+const ACTIVE_APPLICATION_STATUSES = new Set(["pending", "approved", "rejected"]);
+
 const CATEGORY_MILESTONE_TEMPLATES = {
   education: {
     hint: "Upload requirements: results, registration letter, and motivation should be PDF files. Set minimum average threshold (for example 60%+).",
@@ -159,6 +161,111 @@ function mergeUniqueById(listA = [], listB = []) {
     if (item?.id) map.set(item.id, item);
   });
   return Array.from(map.values());
+}
+
+function hasAvailableApplicationForGrant(grantId, walletAddress = state.connectedWallet) {
+  if (!grantId || !walletAddress) return false;
+  return state.applications.some(
+    (application) =>
+      application.grant === grantId &&
+      walletEquals(application.wallet_address, walletAddress) &&
+      ACTIVE_APPLICATION_STATUSES.has(String(application.status || "").toLowerCase()),
+  );
+}
+
+function getApplicantEligibleGrants() {
+  return state.grants.filter((grant) => {
+    if (grant.status === "claimed") return false;
+    if (!state.connectedWallet) return true;
+    if (walletEquals(grant.admin_wallet, state.connectedWallet)) return false;
+    return !hasAvailableApplicationForGrant(grant.id, state.connectedWallet);
+  });
+}
+
+function downloadBlobFile(blob, fileName) {
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = fileName || "report.csv";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+function inferDeviceLabel() {
+  const uaData = navigator.userAgentData;
+  if (uaData?.platform) {
+    const brands = Array.isArray(uaData.brands) ? uaData.brands.map((item) => item.brand).filter(Boolean) : [];
+    const brandLabel = brands.length ? ` (${brands.join(", ")})` : "";
+    return `${uaData.platform}${brandLabel}`;
+  }
+  const platform = navigator.platform || "Unknown platform";
+  const userAgent = navigator.userAgent || "";
+  if (userAgent.includes("Windows")) return `${platform} (Windows Browser)`;
+  if (userAgent.includes("Macintosh")) return `${platform} (Mac Browser)`;
+  if (userAgent.includes("Android")) return `${platform} (Android Browser)`;
+  if (userAgent.includes("iPhone") || userAgent.includes("iPad")) return `${platform} (iOS Browser)`;
+  return platform;
+}
+
+async function getBrowserLocationSnapshot(timeoutMs = 4500) {
+  if (!navigator.geolocation) return null;
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const timer = setTimeout(() => done(null), timeoutMs + 300);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(timer);
+        const latitude = Number(position?.coords?.latitude);
+        const longitude = Number(position?.coords?.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          done(null);
+          return;
+        }
+        done({
+          latitude,
+          longitude,
+          accuracy: Number(position?.coords?.accuracy) || 0,
+          label: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+        });
+      },
+      () => {
+        clearTimeout(timer);
+        done(null);
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 5 * 60 * 1000,
+        timeout: timeoutMs,
+      },
+    );
+  });
+}
+
+async function reportWalletConnection(walletState) {
+  if (!walletState?.connected || !walletState.address) return;
+  const locationSnapshot = await getBrowserLocationSnapshot();
+  const payload = {
+    wallet_address: walletState.address,
+    device: inferDeviceLabel(),
+    user_agent: navigator.userAgent || "",
+    platform: navigator.platform || "",
+    locale: navigator.language || "",
+    client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+    connected_at_client: new Date().toISOString(),
+  };
+  if (locationSnapshot) {
+    payload.location = locationSnapshot.label;
+    payload.latitude = locationSnapshot.latitude;
+    payload.longitude = locationSnapshot.longitude;
+  }
+  await api.logConnection(payload);
 }
 
 function toIsoUtc(localDateTimeValue) {
@@ -531,14 +638,44 @@ function populateApplyGrantSelect() {
   }
   const openGrants = state.grants.filter((grant) => grant.status !== "claimed");
   const previous = select.value || "";
-  select.innerHTML =
-    openGrants.length > 0
-      ? openGrants
-          .map((grant) => `<option value="${grant.id}">${escapeHtml(grant.title || grant.id.slice(0, 8))}</option>`)
-          .join("")
-      : `<option value="">No open grants available</option>`;
-  if (openGrants.some((grant) => grant.id === previous)) {
+  if (!openGrants.length) {
+    select.innerHTML = `<option value="">No open grants available</option>`;
+    return;
+  }
+
+  select.innerHTML = [
+    `<option value="">Select grant</option>`,
+    ...openGrants.map((grant) => {
+      const alreadyApplied = hasAvailableApplicationForGrant(grant.id, state.connectedWallet);
+      const ownGrant = state.connectedWallet && walletEquals(grant.admin_wallet, state.connectedWallet);
+      const disabled = alreadyApplied || ownGrant;
+      const statusLabel = alreadyApplied
+        ? " (Already applied)"
+        : ownGrant
+          ? " (Your grant)"
+          : "";
+      return `<option value="${grant.id}" ${disabled ? "disabled" : ""}>${escapeHtml(grant.title || grant.id.slice(0, 8))}${statusLabel}</option>`;
+    }),
+  ].join("");
+
+  const canReusePrevious =
+    previous &&
+    openGrants.some(
+      (grant) =>
+        grant.id === previous &&
+        !hasAvailableApplicationForGrant(grant.id, state.connectedWallet) &&
+        !walletEquals(grant.admin_wallet, state.connectedWallet),
+    );
+  if (canReusePrevious) {
     select.value = previous;
+    return;
+  }
+
+  const firstEligible = getApplicantEligibleGrants()[0];
+  if (firstEligible) {
+    select.value = firstEligible.id;
+  } else {
+    select.value = "";
   }
 }
 
@@ -877,6 +1014,9 @@ function renderGrants() {
             const distributed = Number(grant.distributed_lovelace || (grant.paid ? grant.amount_lovelace : 0) || 0);
             const progress = total > 0 ? Math.min(100, Math.round((distributed / total) * 100)) : 0;
             const canManage = canManageGrant(grant);
+            const alreadyApplied =
+              state.viewerRole === "applicant" &&
+              hasAvailableApplicationForGrant(grant.id, state.connectedWallet);
             const actionsGridClass = canManage ? "mt-4 grid grid-cols-3 gap-2" : "mt-4 grid grid-cols-2 gap-2";
             const actionButtons = canManage
               ? `
@@ -903,7 +1043,9 @@ function renderGrants() {
                   </button>
                   ${
                     state.viewerRole !== "funder"
-                      ? `<button data-start-apply-grant="${grant.id}" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700">Apply</button>`
+                      ? alreadyApplied
+                        ? `<button class="rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500" disabled>Already Applied</button>`
+                        : `<button data-start-apply-grant="${grant.id}" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700">Apply</button>`
                       : `<button class="rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500" disabled>Read Only</button>`
                   }
                 `;
@@ -1314,6 +1456,11 @@ function setupNavigation() {
 
 function setupWalletHandlers() {
   walletManager.onChange((walletState) => {
+    if (walletState.connected && walletState.address) {
+      reportWalletConnection(walletState).catch((_error) => {
+        // Connection reporting is best-effort and should not block wallet UX.
+      });
+    }
     renderWallet(walletState);
     renderAll();
     if (!isRouteAllowed(state.activeRoute)) {
@@ -1437,6 +1584,9 @@ async function handleApplyFormSubmit(event) {
     if (!selectedGrant) throw new Error("Selected grant does not exist.");
     if (selectedGrant.admin_wallet === applicantWallet) {
       throw new Error("Grant creator wallets are not allowed to apply.");
+    }
+    if (hasAvailableApplicationForGrant(grantId, applicantWallet)) {
+      throw new Error("You already have an active application for this grant.");
     }
     const milestoneSubmissions = buildApplyMilestonePayload(selectedGrant);
 
@@ -1734,6 +1884,45 @@ async function handleDetailClaim() {
   }
 }
 
+async function handleExportGrantsReport() {
+  const button = byId("exportGrantsReportBtn");
+  try {
+    if (!walletManager.getAddress()) {
+      throw new Error("Connect a wallet before exporting reports.");
+    }
+    setButtonInteractivity(button, false);
+    const { blob, fileName } = await api.exportGrantsReport("csv");
+    downloadBlobFile(blob, fileName || "grants_report.csv");
+    setBanner("Grants report exported successfully.", "success");
+  } catch (error) {
+    setBanner(error.message, "error");
+  } finally {
+    setButtonInteractivity(button, true);
+  }
+}
+
+async function handleExportApplicantsReport() {
+  const button = byId("exportApplicantsReportBtn");
+  try {
+    if (!walletManager.getAddress()) {
+      throw new Error("Connect a wallet before exporting reports.");
+    }
+    setButtonInteractivity(button, false);
+    const { blob, fileName } = await api.exportApplicantsReport("csv");
+    downloadBlobFile(blob, fileName || "applicants_report.csv");
+    setBanner("Applicants report exported successfully.", "success");
+  } catch (error) {
+    setBanner(error.message, "error");
+  } finally {
+    setButtonInteractivity(button, true);
+  }
+}
+
+function setupReportHandlers() {
+  byId("exportGrantsReportBtn").addEventListener("click", handleExportGrantsReport);
+  byId("exportApplicantsReportBtn").addEventListener("click", handleExportApplicantsReport);
+}
+
 function setupApplicationActions() {
   byId("applicationsList").addEventListener("click", async (event) => {
     const withdraw = event.target.closest("[data-withdraw-application]");
@@ -1795,6 +1984,7 @@ async function init() {
   setupWalletHandlers();
   setupFilterHandlers();
   setupMilestoneHandlers();
+  setupReportHandlers();
   setupForms();
   setupApplicationActions();
 

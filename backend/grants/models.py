@@ -115,3 +115,31 @@ class AuditEvent(TimestampedModel):
 
     def __str__(self):
         return f"{self.action} @ {self.created_at.isoformat()}"
+
+
+class ConnectionLog(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    wallet_address = models.CharField(max_length=200)
+    device = models.CharField(max_length=220, blank=True)
+    user_agent = models.TextField(blank=True)
+    platform = models.CharField(max_length=120, blank=True)
+    locale = models.CharField(max_length=32, blank=True)
+    client_timezone = models.CharField(max_length=80, blank=True)
+    connected_at_client = models.DateTimeField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    location = models.CharField(max_length=220, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def location_display(self):
+        if self.location:
+            return self.location
+        if self.latitude is not None and self.longitude is not None:
+            return f"{self.latitude}, {self.longitude}"
+        return ""
+
+    def __str__(self):
+        return f"{self.wallet_address} @ {self.created_at.isoformat()}"

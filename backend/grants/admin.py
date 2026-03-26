@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Application, AuditEvent, Grant
+from .models import Application, AuditEvent, ConnectionLog, Grant
 
 
 @admin.register(Grant)
@@ -20,3 +20,9 @@ class ApplicationAdmin(admin.ModelAdmin):
 class AuditEventAdmin(admin.ModelAdmin):
     list_display = ("id", "action", "actor_wallet", "grant", "created_at")
     search_fields = ("action", "actor_wallet")
+
+
+@admin.register(ConnectionLog)
+class ConnectionLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "wallet_address", "device", "ip_address", "location", "created_at")
+    search_fields = ("wallet_address", "device", "ip_address", "location")

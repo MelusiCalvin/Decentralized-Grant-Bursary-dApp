@@ -8,7 +8,7 @@ from django.core.validators import URLValidator
 from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework import serializers
-from .models import Application, AuditEvent, Grant
+from .models import Application, AuditEvent, ConnectionLog, Grant
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
@@ -195,6 +195,18 @@ class ApplicationSerializer(serializers.ModelSerializer):
         if grant and grant.application_deadline and timezone.now() > grant.application_deadline:
             raise serializers.ValidationError({"grant": "Application deadline has passed for this grant."})
 
+        if grant and wallet_address:
+            duplicates = Application.objects.filter(
+                grant=grant,
+                wallet_address=wallet_address,
+            ).exclude(status=Application.Status.WITHDRAWN)
+            if self.instance:
+                duplicates = duplicates.exclude(pk=self.instance.pk)
+            if duplicates.exists():
+                raise serializers.ValidationError(
+                    {"grant": "An active application from this wallet already exists for the selected grant."}
+                )
+
         requested_amount = attrs.get("requested_amount_lovelace")
         if requested_amount is not None and requested_amount < 0:
             raise serializers.ValidationError({"requested_amount_lovelace": "Requested amount cannot be negative."})
@@ -352,3 +364,24 @@ class AuditEventSerializer(serializers.ModelSerializer):
             "details",
             "created_at",
         ]
+
+
+class ConnectionLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConnectionLog
+        fields = [
+            "id",
+            "wallet_address",
+            "device",
+            "user_agent",
+            "platform",
+            "locale",
+            "client_timezone",
+            "connected_at_client",
+            "ip_address",
+            "location",
+            "latitude",
+            "longitude",
+            "created_at",
+        ]
+        read_only_fields = ["id", "ip_address", "created_at"]
