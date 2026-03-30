@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key-change-for-prod")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = ["decentralized-grant-bursary-dapp-znni.onrender.com", "127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["decentralized-grant-bursary-dapp-znni.onrender.com"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -66,14 +66,6 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
-
-# Use DATABASE_URL if available (for production)
-if os.getenv("DATABASE_URL"):
-    import dj_database_url
-    DATABASES["default"] = dj_database_url.config(
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
 
 AUTH_PASSWORD_VALIDATORS = []
 

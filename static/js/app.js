@@ -182,17 +182,6 @@ function getApplicantEligibleGrants() {
   });
 }
 
-function downloadBlobFile(blob, fileName) {
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = objectUrl;
-  anchor.download = fileName || "report.csv";
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(objectUrl);
-}
-
 function inferDeviceLabel() {
   const uaData = navigator.userAgentData;
   if (uaData?.platform) {
@@ -1884,51 +1873,6 @@ async function handleDetailClaim() {
   }
 }
 
-async function handleExportGrantsReport(format, buttonId) {
-  const button = byId(buttonId);
-  try {
-    if (!walletManager.getAddress()) {
-      throw new Error("Connect a wallet before exporting reports.");
-    }
-    setButtonInteractivity(button, false);
-    const normalizedFormat = String(format || "csv").toLowerCase();
-    const { blob, fileName } = await api.exportGrantsReport(normalizedFormat);
-    const fallbackName = normalizedFormat === "pdf" ? "grants_report.pdf" : "grants_report.csv";
-    downloadBlobFile(blob, fileName || fallbackName);
-    setBanner(`Grants report exported successfully (${normalizedFormat.toUpperCase()}).`, "success");
-  } catch (error) {
-    setBanner(error.message, "error");
-  } finally {
-    setButtonInteractivity(button, true);
-  }
-}
-
-async function handleExportApplicantsReport(format, buttonId) {
-  const button = byId(buttonId);
-  try {
-    if (!walletManager.getAddress()) {
-      throw new Error("Connect a wallet before exporting reports.");
-    }
-    setButtonInteractivity(button, false);
-    const normalizedFormat = String(format || "csv").toLowerCase();
-    const { blob, fileName } = await api.exportApplicantsReport(normalizedFormat);
-    const fallbackName = normalizedFormat === "pdf" ? "applicants_report.pdf" : "applicants_report.csv";
-    downloadBlobFile(blob, fileName || fallbackName);
-    setBanner(`Applicants report exported successfully (${normalizedFormat.toUpperCase()}).`, "success");
-  } catch (error) {
-    setBanner(error.message, "error");
-  } finally {
-    setButtonInteractivity(button, true);
-  }
-}
-
-function setupReportHandlers() {
-  byId("exportGrantsCsvReportBtn").addEventListener("click", () => handleExportGrantsReport("csv", "exportGrantsCsvReportBtn"));
-  byId("exportGrantsPdfReportBtn").addEventListener("click", () => handleExportGrantsReport("pdf", "exportGrantsPdfReportBtn"));
-  byId("exportApplicantsCsvReportBtn").addEventListener("click", () => handleExportApplicantsReport("csv", "exportApplicantsCsvReportBtn"));
-  byId("exportApplicantsPdfReportBtn").addEventListener("click", () => handleExportApplicantsReport("pdf", "exportApplicantsPdfReportBtn"));
-}
-
 function setupApplicationActions() {
   byId("applicationsList").addEventListener("click", async (event) => {
     const withdraw = event.target.closest("[data-withdraw-application]");
@@ -1990,7 +1934,6 @@ async function init() {
   setupWalletHandlers();
   setupFilterHandlers();
   setupMilestoneHandlers();
-  setupReportHandlers();
   setupForms();
   setupApplicationActions();
 

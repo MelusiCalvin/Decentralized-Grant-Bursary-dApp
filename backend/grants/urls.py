@@ -1,12 +1,10 @@
 from django.urls import path
 from .views import (
-    ApplicantReportExportView,
     ApplicationListCreateView,
     ApplicationReviewView,
     ApplicationWithdrawView,
     AuditEventListView,
     ConnectionLogCreateView,
-    GrantReportExportView,
     GrantApproveView,
     GrantClaimabilityView,
     GrantDeleteView,
@@ -52,6 +50,4 @@ urlpatterns = [
         name="grant-record-claim",
     ),
     path("audit-events/", AuditEventListView.as_view(), name="audit-events"),
-    path("reports/grants/", GrantReportExportView.as_view(), name="grant-report-export"),
-    path("reports/applicants/", ApplicantReportExportView.as_view(), name="applicant-report-export"),
 ]
