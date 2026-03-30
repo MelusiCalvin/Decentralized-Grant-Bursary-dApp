@@ -1,7 +1,45 @@
 import { APP_CONFIG } from "./config.js";
 
+function normalizeApiBase(baseUrl) {
+  return String(baseUrl || "").replace(/\/+$/, "");
+}
+
+function buildApiUrl(baseUrl, path) {
+  return `${normalizeApiBase(baseUrl)}${path}`;
+}
+
+function alternateApiBase(baseUrl) {
+  const normalized = normalizeApiBase(baseUrl);
+  if (!normalized) return "";
+  if (normalized.endsWith("/api")) {
+    return normalized.slice(0, -4);
+  }
+  return `${normalized}/api`;
+}
+
+async function fetchWithBase(path, options = {}) {
+  const primaryBase = normalizeApiBase(APP_CONFIG.API_BASE_URL);
+  const primaryUrl = buildApiUrl(primaryBase, path);
+  let response = await fetch(primaryUrl, options);
+  let resolvedUrl = primaryUrl;
+
+  if (response.status === 404) {
+    const fallbackBase = alternateApiBase(primaryBase);
+    if (fallbackBase && fallbackBase !== primaryBase) {
+      const fallbackUrl = buildApiUrl(fallbackBase, path);
+      const fallbackResponse = await fetch(fallbackUrl, options);
+      if (fallbackResponse.ok || fallbackResponse.status !== 404) {
+        response = fallbackResponse;
+        resolvedUrl = fallbackUrl;
+      }
+    }
+  }
+
+  return { response, resolvedUrl };
+}
+
 async function request(path, options = {}) {
-  const response = await fetch(`${APP_CONFIG.API_BASE_URL}${path}`, {
+  const { response, resolvedUrl } = await fetchWithBase(path, {
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
@@ -14,7 +52,7 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const detail = formatApiError(payload);
-    const message = `HTTP ${response.status} on ${path}: ${detail || "Request failed."}`;
+    const message = `HTTP ${response.status} on ${resolvedUrl}: ${detail || "Request failed."}`;
     throw new Error(message);
   }
 
@@ -32,7 +70,7 @@ function inferFileName(contentDisposition, fallbackName) {
 }
 
 async function requestFile(path, fallbackFileName, options = {}) {
-  const response = await fetch(`${APP_CONFIG.API_BASE_URL}${path}`, {
+  const { response, resolvedUrl } = await fetchWithBase(path, {
     headers: {
       ...(options.headers || {}),
     },
@@ -43,7 +81,7 @@ async function requestFile(path, fallbackFileName, options = {}) {
     const isJson = response.headers.get("content-type")?.includes("application/json");
     const payload = isJson ? await response.json() : await response.text();
     const detail = formatApiError(payload);
-    throw new Error(`HTTP ${response.status} on ${path}: ${detail || "Request failed."}`);
+    throw new Error(`HTTP ${response.status} on ${resolvedUrl}: ${detail || "Request failed."}`);
   }
 
   const contentDisposition = response.headers.get("content-disposition") || "";
