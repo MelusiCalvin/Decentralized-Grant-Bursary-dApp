@@ -1884,16 +1884,18 @@ async function handleDetailClaim() {
   }
 }
 
-async function handleExportGrantsReport() {
-  const button = byId("exportGrantsReportBtn");
+async function handleExportGrantsReport(format, buttonId) {
+  const button = byId(buttonId);
   try {
     if (!walletManager.getAddress()) {
       throw new Error("Connect a wallet before exporting reports.");
     }
     setButtonInteractivity(button, false);
-    const { blob, fileName } = await api.exportGrantsReport("csv");
-    downloadBlobFile(blob, fileName || "grants_report.csv");
-    setBanner("Grants report exported successfully.", "success");
+    const normalizedFormat = String(format || "csv").toLowerCase();
+    const { blob, fileName } = await api.exportGrantsReport(normalizedFormat);
+    const fallbackName = normalizedFormat === "pdf" ? "grants_report.pdf" : "grants_report.csv";
+    downloadBlobFile(blob, fileName || fallbackName);
+    setBanner(`Grants report exported successfully (${normalizedFormat.toUpperCase()}).`, "success");
   } catch (error) {
     setBanner(error.message, "error");
   } finally {
@@ -1901,16 +1903,18 @@ async function handleExportGrantsReport() {
   }
 }
 
-async function handleExportApplicantsReport() {
-  const button = byId("exportApplicantsReportBtn");
+async function handleExportApplicantsReport(format, buttonId) {
+  const button = byId(buttonId);
   try {
     if (!walletManager.getAddress()) {
       throw new Error("Connect a wallet before exporting reports.");
     }
     setButtonInteractivity(button, false);
-    const { blob, fileName } = await api.exportApplicantsReport("csv");
-    downloadBlobFile(blob, fileName || "applicants_report.csv");
-    setBanner("Applicants report exported successfully.", "success");
+    const normalizedFormat = String(format || "csv").toLowerCase();
+    const { blob, fileName } = await api.exportApplicantsReport(normalizedFormat);
+    const fallbackName = normalizedFormat === "pdf" ? "applicants_report.pdf" : "applicants_report.csv";
+    downloadBlobFile(blob, fileName || fallbackName);
+    setBanner(`Applicants report exported successfully (${normalizedFormat.toUpperCase()}).`, "success");
   } catch (error) {
     setBanner(error.message, "error");
   } finally {
@@ -1919,8 +1923,10 @@ async function handleExportApplicantsReport() {
 }
 
 function setupReportHandlers() {
-  byId("exportGrantsReportBtn").addEventListener("click", handleExportGrantsReport);
-  byId("exportApplicantsReportBtn").addEventListener("click", handleExportApplicantsReport);
+  byId("exportGrantsCsvReportBtn").addEventListener("click", () => handleExportGrantsReport("csv", "exportGrantsCsvReportBtn"));
+  byId("exportGrantsPdfReportBtn").addEventListener("click", () => handleExportGrantsReport("pdf", "exportGrantsPdfReportBtn"));
+  byId("exportApplicantsCsvReportBtn").addEventListener("click", () => handleExportApplicantsReport("csv", "exportApplicantsCsvReportBtn"));
+  byId("exportApplicantsPdfReportBtn").addEventListener("click", () => handleExportApplicantsReport("pdf", "exportApplicantsPdfReportBtn"));
 }
 
 function setupApplicationActions() {

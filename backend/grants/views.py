@@ -2,6 +2,7 @@ import csv
 from django.conf import settings
 from django.db import connections
 from django.db.models import Count, F
+from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -42,21 +43,27 @@ def _get_client_ip(request):
 
 def _build_connection_summary_by_wallet():
     summaries = {}
-    for connection in ConnectionLog.objects.all().order_by("-created_at"):
-        wallet = (connection.wallet_address or "").strip()
-        if not wallet:
-            continue
-        current = summaries.get(wallet)
-        if not current:
-            current = {
-                "connection_count": 0,
-                "last_connected_at": connection.created_at.isoformat() if connection.created_at else "",
-                "last_connected_device": connection.device or "",
-                "last_connected_location": connection.location_display(),
-                "last_connected_ip": connection.ip_address or "",
-            }
-            summaries[wallet] = current
-        current["connection_count"] += 1
+    try:
+        connections_qs = ConnectionLog.objects.all().order_by("-created_at")
+        for connection in connections_qs:
+            wallet = (connection.wallet_address or "").strip()
+            if not wallet:
+                continue
+            current = summaries.get(wallet)
+            if not current:
+                current = {
+                    "connection_count": 0,
+                    "last_connected_at": connection.created_at.isoformat() if connection.created_at else "",
+                    "last_connected_device": connection.device or "",
+                    "last_connected_location": connection.location_display(),
+                    "last_connected_ip": connection.ip_address or "",
+                }
+                summaries[wallet] = current
+            current["connection_count"] += 1
+    except (OperationalError, ProgrammingError):
+        # The report should still export even if the connection-log migration
+        # hasn't been applied yet in the running environment.
+        return {}
     return summaries
 
 
@@ -67,6 +74,97 @@ def _csv_response(filename, fieldnames, rows):
     writer.writeheader()
     for row in rows:
         writer.writerow(row)
+    return response
+
+
+def _escape_pdf_text(value):
+    text = str(value or "")
+    text = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    return text.encode("latin-1", "replace").decode("latin-1")
+
+
+def _build_simple_table_pdf(title, fieldnames, rows):
+    lines = [
+        title,
+        f"Generated at: {timezone.now().isoformat()}",
+        " | ".join(fieldnames),
+        "-" * 120,
+    ]
+    for row in rows:
+        values = []
+        for field in fieldnames:
+            value = row.get(field, "")
+            compact = str(value).replace("\n", " ").replace("\r", " ").strip()
+            values.append(compact[:120])
+        lines.append(" | ".join(values))
+
+    if not lines:
+        lines = [title, "No rows."]
+
+    lines_per_page = 45
+    pages = [lines[index:index + lines_per_page] for index in range(0, len(lines), lines_per_page)]
+    if not pages:
+        pages = [[title, "No rows."]]
+
+    objects = []
+    objects.append("<< /Type /Catalog /Pages 2 0 R >>")
+    objects.append("")  # placeholder for Pages object
+    objects.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+
+    page_refs = []
+    next_obj = 4
+    for page_lines in pages:
+        page_obj_num = next_obj
+        content_obj_num = next_obj + 1
+        page_refs.append(f"{page_obj_num} 0 R")
+
+        content_ops = ["BT", "/F1 9 Tf", "42 790 Td", "14 TL"]
+        for line_index, raw_line in enumerate(page_lines):
+            if line_index > 0:
+                content_ops.append("T*")
+            content_ops.append(f"({_escape_pdf_text(raw_line)}) Tj")
+        content_ops.append("ET")
+        content_stream = "\n".join(content_ops).encode("latin-1", "replace")
+        content_object = (
+            f"<< /Length {len(content_stream)} >>\n"
+            f"stream\n"
+            f"{content_stream.decode('latin-1')}\n"
+            f"endstream"
+        )
+        page_object = (
+            "<< /Type /Page /Parent 2 0 R "
+            "/MediaBox [0 0 612 792] "
+            "/Resources << /Font << /F1 3 0 R >> >> "
+            f"/Contents {content_obj_num} 0 R >>"
+        )
+        objects.append(page_object)
+        objects.append(content_object)
+        next_obj += 2
+
+    objects[1] = f"<< /Type /Pages /Count {len(pages)} /Kids [{' '.join(page_refs)}] >>"
+
+    pdf = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
+    offsets = [0]
+    for index, obj in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf += f"{index} 0 obj\n{obj}\nendobj\n".encode("latin-1", "replace")
+
+    xref_start = len(pdf)
+    pdf += f"xref\n0 {len(objects) + 1}\n".encode("latin-1")
+    pdf += b"0000000000 65535 f \n"
+    for offset in offsets[1:]:
+        pdf += f"{offset:010d} 00000 n \n".encode("latin-1")
+    pdf += (
+        f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+        f"startxref\n{xref_start}\n%%EOF"
+    ).encode("latin-1")
+    return pdf
+
+
+def _pdf_response(filename, title, fieldnames, rows):
+    pdf_bytes = _build_simple_table_pdf(title, fieldnames, rows)
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
 
@@ -471,21 +569,6 @@ class GrantReportExportView(APIView):
                 }
             )
 
-        if export_format == "json":
-            return Response(
-                {
-                    "generated_at": timezone.now().isoformat(),
-                    "count": len(rows),
-                    "rows": rows,
-                }
-            )
-
-        if export_format != "csv":
-            return Response(
-                {"error": "Unsupported format. Use format=csv or format=json."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         fieldnames = [
             "grant_id",
             "title",
@@ -507,6 +590,24 @@ class GrantReportExportView(APIView):
             "admin_last_connected_location",
             "admin_last_connected_ip",
         ]
+
+        if export_format == "json":
+            return Response(
+                {
+                    "generated_at": timezone.now().isoformat(),
+                    "count": len(rows),
+                    "rows": rows,
+                }
+            )
+
+        if export_format == "pdf":
+            return _pdf_response("grants_report.pdf", "Grants Report", fieldnames, rows)
+
+        if export_format != "csv":
+            return Response(
+                {"error": "Unsupported format. Use format=csv, format=pdf, or format=json."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return _csv_response("grants_report.csv", fieldnames, rows)
 
 
@@ -541,21 +642,6 @@ class ApplicantReportExportView(APIView):
                 }
             )
 
-        if export_format == "json":
-            return Response(
-                {
-                    "generated_at": timezone.now().isoformat(),
-                    "count": len(rows),
-                    "rows": rows,
-                }
-            )
-
-        if export_format != "csv":
-            return Response(
-                {"error": "Unsupported format. Use format=csv or format=json."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         fieldnames = [
             "application_id",
             "grant_id",
@@ -575,6 +661,24 @@ class ApplicantReportExportView(APIView):
             "applicant_last_connected_location",
             "applicant_last_connected_ip",
         ]
+
+        if export_format == "json":
+            return Response(
+                {
+                    "generated_at": timezone.now().isoformat(),
+                    "count": len(rows),
+                    "rows": rows,
+                }
+            )
+
+        if export_format == "pdf":
+            return _pdf_response("applicants_report.pdf", "Applicants Report", fieldnames, rows)
+
+        if export_format != "csv":
+            return Response(
+                {"error": "Unsupported format. Use format=csv, format=pdf, or format=json."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return _csv_response("applicants_report.csv", fieldnames, rows)
 
 
