@@ -11,9 +11,23 @@ class GrantAdmin(admin.ModelAdmin):
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display = ("id", "full_name", "organization", "wallet_address", "status", "created_at")
-    search_fields = ("full_name", "wallet_address", "email", "organization")
+    list_display = ("id", "full_name", "wallet_address", "status", "created_at", "grant_id_display")
+    search_fields = ("full_name", "wallet_address", "email")
     list_filter = ("status",)
+
+    def grant_id_display(self, obj):
+        return obj.grant_id or "-"
+
+    grant_id_display.short_description = "grant"
+
+    def get_queryset(self, request):
+        # Keep admin changelist resilient even when historical rows contain
+        # problematic large/legacy payloads in optional fields.
+        return (
+            super()
+            .get_queryset(request)
+            .only("id", "full_name", "wallet_address", "status", "created_at", "grant_id")
+        )
 
 
 @admin.register(AuditEvent)
