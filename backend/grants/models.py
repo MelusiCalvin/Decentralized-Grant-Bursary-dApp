@@ -49,13 +49,14 @@ class Grant(TimestampedModel):
             return False
         return timezone.now() >= self.unlock_time
 
-    def is_claimable_for(self, wallet_address):
+    def is_claimable_for(self, wallet_address, application_approved=False):
         return all(
             [
-                self.approved,
+                self.approved or bool(application_approved),
                 self.milestone_approved,
                 self.is_unlocked(),
                 not self.paid,
+                bool(self.funded_tx_hash),
                 self.amount_lovelace > 0,
                 bool(wallet_address),
                 wallet_address == self.beneficiary_wallet,

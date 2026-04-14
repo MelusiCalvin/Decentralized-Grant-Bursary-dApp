@@ -325,12 +325,30 @@ class GrantRecordFundingView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Funding a specific approved application binds this grant to that beneficiary.
+        grant.beneficiary_wallet = application.wallet_address
+        funded_amount = (
+            data.get("amount_lovelace")
+            or application.requested_amount_lovelace
+            or grant.amount_lovelace
+        )
         grant.funded_tx_hash = data["funded_tx_hash"]
+        if funded_amount and funded_amount > 0:
+            grant.amount_lovelace = funded_amount
         if grant.total_funding_lovelace <= 0:
             grant.total_funding_lovelace = max(grant.amount_lovelace, 0)
-        if grant.status == Grant.Status.DRAFT:
+        if grant.status != Grant.Status.CLAIMED:
             grant.status = Grant.Status.FUNDED
-        grant.save(update_fields=["funded_tx_hash", "total_funding_lovelace", "status", "updated_at"])
+        grant.save(
+            update_fields=[
+                "beneficiary_wallet",
+                "funded_tx_hash",
+                "amount_lovelace",
+                "total_funding_lovelace",
+                "status",
+                "updated_at",
+            ]
+        )
 
         log_event(
             action="GRANT_FUNDED",
@@ -346,11 +364,18 @@ class GrantClaimabilityView(APIView):
         grant = get_object_or_404(Grant, id=grant_id)
         wallet = request.query_params.get("wallet", "").strip()
         now = timezone.now()
+        application_approved = Application.objects.filter(
+            grant=grant,
+            wallet_address=wallet,
+            status=Application.Status.APPROVED,
+        ).exists()
 
         checks = {
             "wallet_match": wallet == grant.beneficiary_wallet and bool(wallet),
             "time_unlocked": bool(grant.unlock_time and now >= grant.unlock_time),
-            "approved": grant.approved,
+            "approved": grant.approved or application_approved,
+            "application_approved": application_approved,
+            "funded": bool(grant.funded_tx_hash),
             "milestone_approved": grant.milestone_approved,
             "not_paid": not grant.paid,
             "amount_positive": grant.amount_lovelace > 0,
@@ -374,8 +399,16 @@ class GrantRecordClaimView(APIView):
         serializer = ClaimRecordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        application_approved = Application.objects.filter(
+            grant=grant,
+            wallet_address=data["wallet_address"],
+            status=Application.Status.APPROVED,
+        ).exists()
 
-        if not grant.is_claimable_for(data["wallet_address"]):
+        if not grant.is_claimable_for(
+            data["wallet_address"],
+            application_approved=application_approved,
+        ):
             return Response(
                 {"error": "Claim conditions not satisfied for this wallet."},
                 status=status.HTTP_400_BAD_REQUEST,

@@ -344,6 +344,7 @@ class FundingRecordSerializer(serializers.Serializer):
     admin_wallet = serializers.CharField(max_length=200)
     funded_tx_hash = serializers.CharField(max_length=128)
     application_id = serializers.UUIDField()
+    amount_lovelace = serializers.IntegerField(min_value=1, required=False)
 
 
 class ClaimRecordSerializer(serializers.Serializer):

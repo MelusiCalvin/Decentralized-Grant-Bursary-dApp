@@ -317,7 +317,12 @@ class WalletManager {
       throw new Error("Unable to resolve wallet signing address.");
     }
 
-    return this.api.signData(this.walletAddressHex, payloadHex);
+    try {
+      return await this.api.signData(this.walletAddressHex, payloadHex);
+    } catch (error) {
+      const detail = error?.info || error?.message || String(error);
+      throw new Error(`Wallet signature failed: ${detail}`);
+    }
   }
 
   disconnectWallet() {
