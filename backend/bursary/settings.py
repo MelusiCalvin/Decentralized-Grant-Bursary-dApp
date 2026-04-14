@@ -8,6 +8,11 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-secret-key-change-for-prod
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = ["decentralized-grant-bursary-dapp-znni.onrender.com"]
 
+# Frontend runtime blockchain config (injected via template).
+BLOCKFROST_API_KEY = os.getenv("BLOCKFROST_API_KEY", "")
+GRANT_SCRIPT_ADDRESS = os.getenv("GRANT_SCRIPT_ADDRESS", "")
+GRANT_VALIDATOR_CBOR_HEX = os.getenv("GRANT_VALIDATOR_CBOR_HEX", "")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

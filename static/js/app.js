@@ -1295,6 +1295,7 @@ function renderApplicationDetail() {
     byId("appDetailGrantSelect").innerHTML = `<option value="${application.grant}">${application.grant}</option>`;
     byId("appDetailGrantSelect").value = application.grant;
   }
+  byId("appDetailClaimGrantId").value = application.grant || byId("appDetailGrantSelect").value || "";
   byId("appDetailApproveAmountAda").value = lovelaceToAdaNumber(requestedLovelace || 0) || 0;
   byId("appDetailUnlockInput").value = "";
 
@@ -1866,7 +1867,7 @@ async function handleDetailClaim() {
     }
     const walletApi = walletApiOrError();
     const beneficiaryWallet = walletAddressOrError();
-    const grantId = byId("appDetailClaimGrantId").value;
+    const grantId = application.grant || byId("appDetailClaimGrantId").value;
     if (!grantId) throw new Error("No grant selected to claim.");
     const grant = state.grants.find((item) => item.id === grantId);
     if (!grant) throw new Error("Selected grant not found.");
@@ -1883,7 +1884,11 @@ async function handleDetailClaim() {
       claim_tx_hash: txHash,
     });
     await refreshData();
-    setBanner(`Claim completed: ${txHash}`, "success");
+    if (String(txHash).startsWith("direct-claim-")) {
+      setBanner("Claim recorded. Direct funding mode was used, so payout happened during sponsor funding.", "success");
+    } else {
+      setBanner(`Claim completed: ${txHash}`, "success");
+    }
   } catch (error) {
     setBanner(error.message, "error");
   }

@@ -43,6 +43,17 @@ async function initLucid(walletApi) {
   return lucid;
 }
 
+function hasConfiguredScriptAddress() {
+  return Boolean(
+    APP_CONFIG.GRANT_SCRIPT_ADDRESS &&
+      !APP_CONFIG.GRANT_SCRIPT_ADDRESS.includes("placeholder"),
+  );
+}
+
+function hasConfiguredValidator() {
+  return Boolean(APP_CONFIG.GRANT_VALIDATOR_CBOR_HEX);
+}
+
 async function buildGrantDatum(lucid, { adminAddress, beneficiaryAddress, amountLovelace, unlockTimeIso }) {
   const { Data } = await loadLucidModule();
   const adminDetails = lucid.utils.getAddressDetails(adminAddress);
@@ -76,11 +87,18 @@ async function buildGrantDatum(lucid, { adminAddress, beneficiaryAddress, amount
 
 export async function fundGrantContract(walletApi, params) {
   const lucid = await initLucid(walletApi);
-  const datum = await buildGrantDatum(lucid, params);
-
-  if (!APP_CONFIG.GRANT_SCRIPT_ADDRESS || APP_CONFIG.GRANT_SCRIPT_ADDRESS.includes("placeholder")) {
-    throw new Error("Set GRANT_SCRIPT_ADDRESS in js/config.js.");
+  if (!hasConfiguredScriptAddress()) {
+    // Direct-transfer fallback when contract config is missing.
+    const tx = await lucid
+      .newTx()
+      .payToAddress(params.beneficiaryAddress, { lovelace: BigInt(params.amountLovelace) })
+      .complete();
+    const signed = await tx.sign().complete();
+    const txHash = await signed.submit();
+    return txHash;
   }
+
+  const datum = await buildGrantDatum(lucid, params);
 
   const tx = await lucid
     .newTx()
@@ -94,16 +112,12 @@ export async function fundGrantContract(walletApi, params) {
 
 export async function claimGrantFromContract(walletApi, { beneficiaryAddress, amountLovelace }) {
   const lucid = await initLucid(walletApi);
+  if (!hasConfiguredScriptAddress() || !hasConfiguredValidator()) {
+    // In direct-transfer fallback mode, funds are transferred during sponsor funding.
+    return `direct-claim-${Date.now()}`;
+  }
+
   const { Data, Constr } = await loadLucidModule();
-
-  if (!APP_CONFIG.GRANT_SCRIPT_ADDRESS || APP_CONFIG.GRANT_SCRIPT_ADDRESS.includes("placeholder")) {
-    throw new Error("Set GRANT_SCRIPT_ADDRESS in js/config.js.");
-  }
-
-  if (!APP_CONFIG.GRANT_VALIDATOR_CBOR_HEX) {
-    throw new Error("Set GRANT_VALIDATOR_CBOR_HEX in js/config.js before claiming.");
-  }
-
   const validator = {
     type: "PlutusV2",
     script: APP_CONFIG.GRANT_VALIDATOR_CBOR_HEX,

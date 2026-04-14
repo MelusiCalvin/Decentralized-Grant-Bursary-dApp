@@ -20,7 +20,15 @@ from .serializers import (
 
 
 def home(request):
-    return render(request, "index.html")
+    return render(
+        request,
+        "index.html",
+        {
+            "runtime_blockfrost_api_key": getattr(settings, "BLOCKFROST_API_KEY", ""),
+            "runtime_grant_script_address": getattr(settings, "GRANT_SCRIPT_ADDRESS", ""),
+            "runtime_grant_validator_cbor_hex": getattr(settings, "GRANT_VALIDATOR_CBOR_HEX", ""),
+        },
+    )
 
 def log_event(action, actor_wallet="", grant=None, details=None):
     AuditEvent.objects.create(

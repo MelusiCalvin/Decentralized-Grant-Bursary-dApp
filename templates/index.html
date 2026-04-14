@@ -27,7 +27,7 @@
               ◈
             </div>
             <div>
-              <p class="font-title text-2xl font-bold leading-none">GrantFlow</p>
+              <p class="font-title text-2xl font-bold leading-none"><a href="https://decentralized-grant-bursary-dapp-znni.onrender.com/">GrantFlow</a></p>
               <p class="text-sm text-slate-500">Cardano Distribution</p>
             </div>
           </div>
@@ -406,6 +406,11 @@
         </div>
       </main>
     </div>
+    <script>
+      window.__BLOCKFROST_API_KEY__ = "{{ runtime_blockfrost_api_key|escapejs }}";
+      window.__GRANT_SCRIPT_ADDRESS__ = "{{ runtime_grant_script_address|escapejs }}";
+      window.__GRANT_VALIDATOR_CBOR_HEX__ = "{{ runtime_grant_validator_cbor_hex|escapejs }}";
+    </script>
     <script type="module" src="{% static 'js/app.js' %}"></script>
   </body>
 </html>
