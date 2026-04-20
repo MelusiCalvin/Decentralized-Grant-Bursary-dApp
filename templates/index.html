@@ -8,6 +8,7 @@
     <link rel="icon" href="{% static 'assets/images/Coxygen logo.png' %}" type="image/png"/>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="{% static 'js/script.js' %}"></script>
+    <script src="https://kit.fontawesome.com/446853cb0d.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="{% static 'assets/css/style.css' %}"/>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,19 +35,19 @@
 
           <nav class="mt-4 flex gap-2 overflow-x-auto pb-2 lg:mt-7 lg:block lg:space-y-1 lg:overflow-visible">
             <button data-route="dashboard" class="nav-link active inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
-              <span>▦</span><span>Dashboard</span>
+              <span><i class="fa-solid fa-table-columns"></i></span><span>Dashboard</span>
             </button>
             <button data-route="grants" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
-              <span>📄</span><span>Grants</span>
+              <span><i class="fa-solid fa-file-zipper"></i></span><span>Grants</span>
             </button>
             <button data-route="apply" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
-              <span>Apply</span>
+              <span><i class="fa-solid fa-pen-to-square"></i></span><span>Apply</span>
             </button>
             <button data-route="applications" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
-              <span>👥</span><span>Applications</span>
+              <span><i class="fa-solid fa-user-group"></i></span><span>Applications</span>
             </button>
             <button data-route="create-grant" class="nav-link inline-flex min-w-max items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-violetSoft">
-              <span>＋</span><span>Create Grant</span>
+              <span><i class="fa-solid fa-plus"></i></span><span>Create Grant</span>
             </button>
           </nav>
 
